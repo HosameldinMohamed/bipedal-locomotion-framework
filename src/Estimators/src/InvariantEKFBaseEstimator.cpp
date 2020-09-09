@@ -959,4 +959,3 @@ bool InvariantEKFBaseEstimator::Impl::copyDiagX(const Eigen::MatrixXd& X,
     }
     return true;
 }
-
