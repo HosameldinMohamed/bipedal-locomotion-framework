@@ -25,6 +25,11 @@ namespace Estimators
     using AccelerometerBias = Eigen::Vector3d;
     using GyroscopeBias = Eigen::Vector3d;
 
+    using ExtendedMotionVector = manif::SE_2_3Tangentd;
+    using LinearAcceleration = Eigen::Vector3d;
+    using AngularVelocity = manif::SO3Tangentd;
+    using Twist = manif::SE3Tangentd;
+
     class IMUBipedMatrixLieGroupTangent;
 
     class IMUBipedMatrixLieGroup
@@ -252,11 +257,6 @@ namespace Estimators
     };
 
 
-    using ExtendedMotionVector = manif::SE_2_3Tangentd;
-    using LinearAcceleration = Eigen::Vector3d;
-    using AngularVelocity = manif::SO3Tangentd;
-    using Twist = manif::SE3Tangentd;
-
     class IMUBipedMatrixLieGroupTangent
     {
     public:
@@ -300,6 +300,7 @@ namespace Estimators
         IMUBipedMatrixLieGroupTangent(const Eigen::VectorXd& v);
 
         void fromVector(const Eigen::VectorXd& v);
+        Eigen::VectorXd toVector();
 
         IMUBipedMatrixLieGroupTangent operator+(const IMUBipedMatrixLieGroupTangent& other);
         IMUBipedMatrixLieGroupTangent operator-(const IMUBipedMatrixLieGroupTangent& other);

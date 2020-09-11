@@ -47,7 +47,7 @@ IMUBipedMatrixLieGroup::IMUBipedMatrixLieGroup(const bool& estimateBias)  : m_pi
     m_pimpl->lfPose.setIdentity();
     m_pimpl->rfPose.setIdentity();
 
-    m_pimpl->biasStatesEnabled = true;
+    m_pimpl->biasStatesEnabled = estimateBias;
     m_pimpl->accBias.setZero();
     m_pimpl->gyroBias.setZero();
 }
@@ -117,15 +117,10 @@ IMUBipedMatrixLieGroup::IMUBipedMatrixLieGroup(const IMUBipedMatrixLieGroup& oth
     m_pimpl->lfPose = other.leftFootContactPose();
     m_pimpl->rfPose = other.rightFootContactPose();
 
-    if (other.areBiasStatesActive())
-    {
-        m_pimpl->accBias = other.accelerometerBias();
-        m_pimpl->gyroBias = other.gyroscopeBias();
-    }
-    else
-    {
-        m_pimpl->deactivateBiasStatesAndSetToZero();
-    }
+    m_pimpl->biasStatesEnabled = other.areBiasStatesActive();
+    m_pimpl->accBias = other.accelerometerBias();
+    m_pimpl->gyroBias = other.gyroscopeBias();
+
 }
 
 IMUBipedMatrixLieGroup IMUBipedMatrixLieGroup::operator=(const IMUBipedMatrixLieGroup& other)
@@ -550,6 +545,7 @@ IMUBipedMatrixLieGroupTangent::IMUBipedMatrixLieGroupTangent(const ExtendedMotio
     m_pimpl->vRF = vRF;
     m_pimpl->accBias = accBias;
     m_pimpl->gyroBias = gyroBias;
+    m_pimpl->biasComponentsEnabled = true;
 }
 
 IMUBipedMatrixLieGroupTangent::IMUBipedMatrixLieGroupTangent(const bool& estimateBias) : m_pimpl(std::make_unique<Impl>())
@@ -559,7 +555,7 @@ IMUBipedMatrixLieGroupTangent::IMUBipedMatrixLieGroupTangent(const bool& estimat
     m_pimpl->vRF.setZero();
     m_pimpl->accBias.setZero();
     m_pimpl->gyroBias.setZero();
-    m_pimpl->biasComponentsEnabled = true;
+    m_pimpl->biasComponentsEnabled = estimateBias;
 }
 
 IMUBipedMatrixLieGroupTangent::IMUBipedMatrixLieGroupTangent(const LinearVelocity& baseLinearVelocity,
@@ -647,6 +643,30 @@ void IMUBipedMatrixLieGroupTangent::fromVector(const Eigen::VectorXd& v)
         m_pimpl->gyroBias = v.segment<3>(24);
     }
 }
+
+Eigen::VectorXd IMUBipedMatrixLieGroupTangent::toVector()
+{
+    Eigen::VectorXd v;
+    if (areBiasComponentsActive())
+    {
+        v.resize(m_pimpl->tangentSizeWithBias);
+        v << m_pimpl->vBase.coeffs(),
+             m_pimpl->vLF.coeffs(),
+             m_pimpl->vRF.coeffs(),
+             m_pimpl->accBias,
+             m_pimpl->gyroBias;
+    }
+    else
+    {
+       v.resize(m_pimpl->tangentSizeWithoutBias);
+       v << m_pimpl->vBase.coeffs(),
+            m_pimpl->vLF.coeffs(),
+            m_pimpl->vRF.coeffs();
+    }
+
+    return v;
+}
+
 
 IMUBipedMatrixLieGroupTangent IMUBipedMatrixLieGroupTangent::operator-()
 {
