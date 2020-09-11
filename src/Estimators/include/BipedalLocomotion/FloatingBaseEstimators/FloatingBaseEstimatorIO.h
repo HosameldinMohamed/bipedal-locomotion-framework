@@ -34,6 +34,24 @@ struct InternalState
     Eigen::Vector3d rContactFramePosition; /**< Position of the right foot contact frame in the inertial frame*/
     Eigen::Vector3d accelerometerBias; /**< Bias of the accelerometer expressed in the IMU frame */
     Eigen::Vector3d gyroscopeBias; /**< Bias of the gyroscope expressed in the IMU frame */
+
+    void print()
+    {
+        std::cout <<  "=== Base Estimator State ==="<< std::endl;
+        std::cout << "IMU Quaternion xyz w: " << imuOrientation.coeffs().transpose() << std::endl;
+        std::cout << "IMU Position xyz: " << imuPosition.transpose() << std::endl;
+        std::cout << "IMU Linear Velocity xyz: " << imuLinearVelocity.transpose() << std::endl;
+
+        std::cout << "Left Foot Contact Quaternion xyz w: " << lContactFrameOrientation.coeffs().transpose() << std::endl;
+        std::cout << "Left Foot Contact Position xyz: " << lContactFramePosition.transpose() << std::endl;
+
+        std::cout << "Right Foot Contact Quaternion xyz w: " << rContactFrameOrientation.coeffs().transpose() << std::endl;
+        std::cout << "Right Foot Contact Position xyz: " << rContactFramePosition.transpose() << std::endl;
+
+        std::cout << "Accelerometer Bias xyz: " << accelerometerBias.transpose() << std::endl;
+        std::cout << "Gyroscope Bias xyz: " << gyroscopeBias.transpose() << std::endl;
+        std::cout <<  "==========================="<< std::endl;
+    }
 };
 
 /**

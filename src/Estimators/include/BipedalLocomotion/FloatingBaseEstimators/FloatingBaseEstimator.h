@@ -84,7 +84,8 @@ public:
                            iDynTree::Transform& IMU_H_r_foot);
 
         /**
-        * Get relative pose between IMU and the feet
+        * Get relative pose between IMU and the feet and the Jacobians in mixed-velocity representation
+        * This is because the default velocity representation in iDynTree is mixed velocity
         * @param[in] encoders joint positions through encoder measurements
         * @param[out] IMU_H_l_foot pose of the left foot contact frame with respect to the IMU frame
         * @param[out] IMU_H_r_foot pose of the right foot contact frame with respect to the IMU frame
@@ -97,6 +98,17 @@ public:
                            iDynTree::Transform& IMU_H_r_foot,
                            iDynTree::MatrixDynSize& J_IMULF,
                            iDynTree::MatrixDynSize& J_IMURF);
+
+        /**
+        * Get Jacobian as {feet} J {imu, feet} in left-trivialzied velocity representation
+        * @param[in] encoders joint positions through encoder measurements
+        * @param[out] LF_J_IMULF left trivialized velocity Jacobian of left foot frame with respect to IMU frame
+        * @param[out] RF_J_IMURF left trivialized velocity Jacobian of right foot frame with respect to IMU frame
+        * @return True in case of success, false otherwise.
+        */
+        bool getLeftTrivializedJacobianFeetWRTIMU(const iDynTree::JointPosDoubleArray& encoders,
+                                                  iDynTree::MatrixDynSize& LF_J_IMULF,
+                                                  iDynTree::MatrixDynSize& RF_J_IMURF);
 
         /**
         * Get the base link pose and velocity from the estimated IMU pose and velocity
@@ -400,4 +412,3 @@ private:
 } // namespace BipedalLocomotion
 
 #endif // BIPEDAL_LOCOMOTION_ESTIMATORS_FBE_H
-

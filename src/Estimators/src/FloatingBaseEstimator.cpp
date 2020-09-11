@@ -266,6 +266,29 @@ bool FloatingBaseEstimator::ModelComputations::getIMU_H_feet(const iDynTree::Joi
     return true;
 }
 
+bool FloatingBaseEstimator::ModelComputations::getLeftTrivializedJacobianFeetWRTIMU(const iDynTree::JointPosDoubleArray& encoders,
+                                                                                    iDynTree::MatrixDynSize& LF_J_IMULF,
+                                                                                    iDynTree::MatrixDynSize& RF_J_IMURF)
+{
+    if (!isModelInfoLoaded() && (encoders.size() !=nrJoints()))
+    {
+        std::cerr << "[FloatingBaseEstimator::ModelComputations::getIMU_H_feet] Please set required model info parameters, before calling getIMU_H_feet(...)"
+        << std::endl;
+        return false;
+    }
+
+    if (!m_kindyn.setJointPos(encoders))
+    {
+        std::cerr << "[FloatingBaseEstimator::ModelComputations::getIMU_H_feet] Failed setting joint positions." << std::endl;
+        return false;
+    }
+
+    bool ok = m_kindyn.getRelativeJacobianExplicit(m_baseImuIdx, m_lFootContactIdx, m_lFootContactIdx, m_lFootContactIdx, LF_J_IMULF);
+    ok = ok && m_kindyn.getRelativeJacobianExplicit(m_baseImuIdx, m_rFootContactIdx, m_rFootContactIdx, m_rFootContactIdx, RF_J_IMURF);
+    return ok;
+}
+
+
 bool FloatingBaseEstimator::setIMUMeasurement(const Eigen::Vector3d& accMeas,
                                               const Eigen::Vector3d& gyroMeas)
 {
