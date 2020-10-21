@@ -8,4 +8,3 @@ subdirlist(subdirs ${CMAKE_CURRENT_SOURCE_DIR}/robots/)
 foreach (dir ${subdirs})
   yarp_install(DIRECTORY robots/${dir} DESTINATION ${YARP_ROBOTS_INSTALL_DIR})
 endforeach ()
-
