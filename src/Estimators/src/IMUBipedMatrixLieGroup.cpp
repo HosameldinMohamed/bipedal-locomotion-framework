@@ -160,7 +160,7 @@ void IMUBipedMatrixLieGroup::fromMatrixLieGroup(const Eigen::Ref<Eigen::MatrixXd
     }
 }
 
-Eigen::MatrixXd BipedalLocomotion::Estimators::IMUBipedMatrixLieGroup::asMatrixLieGroup()
+Eigen::MatrixXd BipedalLocomotion::Estimators::IMUBipedMatrixLieGroup::asMatrixLieGroup() const
 {
     Eigen::MatrixXd X;
     if (m_pimpl->biasStatesEnabled)

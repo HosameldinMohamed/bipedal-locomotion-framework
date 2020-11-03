@@ -161,7 +161,7 @@ namespace Estimators
          *  If bias is disabled, last 7 rows and columns are omitted.
          *  \f[ X \in  \mathbb{R}^{13 \times 13} \f]
          */
-        Eigen::MatrixXd asMatrixLieGroup();
+        Eigen::MatrixXd asMatrixLieGroup() const;
 
         /**
          * Left composition of IMU Matrix Lie group

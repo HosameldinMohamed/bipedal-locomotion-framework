@@ -71,9 +71,9 @@ public:
      * Compute continuous time system noise covariance matrix
      * using the predicted internal state estimates
      */
-    void calcQc(const FloatingBaseEstimators::InternalState& X,
-                const FloatingBaseEstimators::SensorsStdDev& sensStdDev,
+    void calcQk(const FloatingBaseEstimators::SensorsStdDev& sensStdDev,
                 const FloatingBaseEstimators::Measurements& meas,
+                const double& dt,
                 const bool& estimateBias,
                 Eigen::MatrixXd& Qc);
 
@@ -115,7 +115,7 @@ public:
     const size_t accBias{IMUBipedMatrixLieGroupTangent::accelerometerBiasOffset()};
     const size_t gyroBias{IMUBipedMatrixLieGroupTangent::gyroscopeBiasOffset()};
     } m_vecOffsets;  /**< Tangent space vector offsets */
-int lolo = 0;
+
     friend class DLGEKFBaseEstimator;
 };
 
@@ -252,7 +252,7 @@ bool DLGEKFBaseEstimator::predictState(const FloatingBaseEstimators::Measurement
         return false;
     }
 
-    Eigen::MatrixXd slantFk, Qc;
+    Eigen::MatrixXd slantFk, Qk;
     // left parametrized velocity Jacobian
     m_pimpl->calcSlantFk(m_statePrev, dt,
                          m_options.accelerationDueToGravity,
@@ -265,17 +265,15 @@ bool DLGEKFBaseEstimator::predictState(const FloatingBaseEstimators::Measurement
     Eigen::MatrixXd Jr = OmegaAsTangent.rjac(); // right Jacobian of Lie group at Omega as tangent
     Eigen::MatrixXd Fk = AdjNegativeOmegaLifted + (Jr*slantFk);
 
-    m_pimpl->calcQc(m_statePrev, m_sensorsDev, meas,  m_options.imuBiasEstimationEnabled, Qc); // compute  Qc at priori state and previous measure
-    m_pimpl->m_P = Fk*m_pimpl->m_P*(Fk.transpose()) + Jr*(Qc*dt)*(Jr.transpose());
+    m_pimpl->calcQk(m_sensorsDev, meas, dt, m_options.imuBiasEstimationEnabled, Qk); // compute  Qc at priori state and previous measure
+    m_pimpl->m_P = Fk*m_pimpl->m_P*(Fk.transpose()) + Jr*(Qk*dt)*(Jr.transpose());
     m_pimpl->extractStateVar(m_pimpl->m_P,m_options.imuBiasEstimationEnabled, m_stateStdDev); // unwrap state covariance matrix diagonal*/
-m_state.print();
-std::cout << "----> " << m_pimpl->lolo << std::endl;
-m_pimpl->lolo++;
+
     return true;
 }
 
 bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measurements& meas,
-                                                 const double& dt)
+                                           const double& dt)
 {
     Eigen::VectorXd deltaY;
     Eigen::MatrixXd measModelJacobian, measNoiseVar;
@@ -465,7 +463,7 @@ bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measure
         deltaY.resize(measurementSpaceDims);
         Pose yRF = m_pimpl->iDynPose2manifPose(yIMU_H_RF);
         Pose hRF = m_pimpl->eigenPose2manifPose(A_R_IMU.transpose()*A_R_RF, A_R_IMU.transpose()*(prf - p));
-        auto rfPoseError = yRF - hRF; // this performs logvee_SE3(inv(hLF), yLF)
+        Twist rfPoseError = yRF - hRF; // this performs logvee_SE3(inv(hLF), yLF)
         deltaY << rfPoseError.coeffs();
 
         // just aliasing using a reference
@@ -514,10 +512,9 @@ bool DLGEKFBaseEstimator::Impl::propagateStates(const Eigen::VectorXd& Omegak,
     auto exphatv = v.exp();
     IMUBipedMatrixLieGroup Xk;
     constructStateLieGroup(X, estimateBias, Xk);
+    auto M = Xk*exphatv;
 
-    Xk = Xk*exphatv; // X_{k+1} = X_{k} Exp(v_k)
-
-    if (!extractStateFromLieGroup(Xk, X))
+    if (!extractStateFromLieGroup(M, X))
     {
         return false;
     }
@@ -728,38 +725,39 @@ void DLGEKFBaseEstimator::Impl::calcSlantFk(const FloatingBaseEstimators::Intern
     }
 }
 
-void DLGEKFBaseEstimator::Impl::calcQc(const FloatingBaseEstimators::InternalState& X,
-                                       const FloatingBaseEstimators::SensorsStdDev& sensStdDev,
+void DLGEKFBaseEstimator::Impl::calcQk(const FloatingBaseEstimators::SensorsStdDev& sensStdDev,
                                        const FloatingBaseEstimators::Measurements& meas,
+                                       const double& dt,
                                        const bool& estimateBias,
-                                       Eigen::MatrixXd& Qc)
+                                       Eigen::MatrixXd& Qk)
 {
     // When biases are enabled,
-    // Qc = blkdiag(0, Qg, Qa, Qrf, Qlf, Qbg, Qba)
+    // Qc = blkdiag(0.5 Qa dt^2, Qg dt, Qa dt, Qrf dt, Qlf dt, Qbg dt, Qba dt)
     // Qrf and Qlf depend on the feet contact states
 
     if (estimateBias)
     {
-        Qc.resize(m_vecSizeWBias, m_vecSizeWBias);
+        Qk.resize(m_vecSizeWBias, m_vecSizeWBias);
     }
     else
     {
-        Qc.resize(m_vecSizeWOBias, m_vecSizeWOBias);
+        Qk.resize(m_vecSizeWOBias, m_vecSizeWOBias);
     }
-    Qc.setZero();
+    Qk.setZero();
 
     Eigen::Vector3d Qa = sensStdDev.accelerometerNoise.array().square();
     Eigen::Vector3d Qg = sensStdDev.gyroscopeNoise.array().square();
 
-    Qc.block<3, 3>(m_vecOffsets.imuOrientation, m_vecOffsets.imuOrientation) = static_cast<Eigen::Matrix3d>(Qg.asDiagonal());
-    Qc.block<3, 3>(m_vecOffsets.imuLinearVel, m_vecOffsets.imuLinearVel) = static_cast<Eigen::Matrix3d>(Qa.asDiagonal());
+    Qk.block<3, 3>(m_vecOffsets.imuPosition, m_vecOffsets.imuPosition) = 0.5*dt*dt*static_cast<Eigen::Matrix3d>(Qa.asDiagonal());
+    Qk.block<3, 3>(m_vecOffsets.imuOrientation, m_vecOffsets.imuOrientation) = dt*static_cast<Eigen::Matrix3d>(Qg.asDiagonal());
+    Qk.block<3, 3>(m_vecOffsets.imuLinearVel, m_vecOffsets.imuLinearVel) = dt*static_cast<Eigen::Matrix3d>(Qa.asDiagonal());
 
     if (estimateBias)
     {
         Eigen::Vector3d Qba = sensStdDev.accelerometerBiasNoise.array().square();
         Eigen::Vector3d Qbg = sensStdDev.gyroscopeBiasNoise.array().square();
-        Qc.block<3, 3>(m_vecOffsets.gyroBias, m_vecOffsets.gyroBias) = static_cast<Eigen::Matrix3d>(Qbg.asDiagonal());
-        Qc.block<3, 3>(m_vecOffsets.accBias, m_vecOffsets.accBias) = static_cast<Eigen::Matrix3d>(Qba.asDiagonal());
+        Qk.block<3, 3>(m_vecOffsets.gyroBias, m_vecOffsets.gyroBias) = dt*static_cast<Eigen::Matrix3d>(Qbg.asDiagonal());
+        Qk.block<3, 3>(m_vecOffsets.accBias, m_vecOffsets.accBias) = dt*static_cast<Eigen::Matrix3d>(Qba.asDiagonal());
     }
 
     Eigen::Matrix<double, 6, 1> Qlf, Qrf;
@@ -786,8 +784,8 @@ void DLGEKFBaseEstimator::Impl::calcQc(const FloatingBaseEstimators::InternalSta
         Qrf = footNoise.array().square();
     }
 
-    Qc.block<6, 6>(m_vecOffsets.lContactFramePosition, m_vecOffsets.lContactFramePosition) = static_cast<Eigen::Matrix<double, 6, 6> >(Qlf.asDiagonal());
-    Qc.block<6, 6>(m_vecOffsets.rContactFramePosition, m_vecOffsets.rContactFramePosition) = static_cast<Eigen::Matrix<double, 6, 6> >(Qrf.asDiagonal());
+    Qk.block<6, 6>(m_vecOffsets.lContactFramePosition, m_vecOffsets.lContactFramePosition) = dt*static_cast<Eigen::Matrix<double, 6, 6> >(Qlf.asDiagonal());
+    Qk.block<6, 6>(m_vecOffsets.rContactFramePosition, m_vecOffsets.rContactFramePosition) = dt*static_cast<Eigen::Matrix<double, 6, 6> >(Qrf.asDiagonal());
 }
 
 void DLGEKFBaseEstimator::Impl::calcOmegak(const FloatingBaseEstimators::InternalState& X,
@@ -822,6 +820,7 @@ void DLGEKFBaseEstimator::Impl::calcOmegak(const FloatingBaseEstimators::Interna
 
     Eigen::Vector3d w = meas.gyro - X.gyroscopeBias;
     Eigen::Vector3d a = meas.acc - X.accelerometerBias + (RT * g);
+
     const auto& v = X.imuLinearVelocity;
 
     Omegak.segment<3>(m_vecOffsets.imuPosition) = (RT*v*dt) + (a*0.5*dt*dt);
