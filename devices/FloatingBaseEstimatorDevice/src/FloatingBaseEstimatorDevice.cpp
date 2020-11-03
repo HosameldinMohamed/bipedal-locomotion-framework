@@ -9,6 +9,7 @@
 #include <BipedalLocomotion/YarpUtilities/Helper.h>
 
 #include <BipedalLocomotion/FloatingBaseEstimators/InvariantEKFBaseEstimator.h>
+#include <BipedalLocomotion/FloatingBaseEstimators/DLGEKFBaseEstimator.h>
 #include <iDynTree/Core/EigenHelpers.h>
 #include <iDynTree/yarp/YARPConversions.h>
 #include <yarp/os/LogStream.h>
@@ -45,6 +46,19 @@ bool FloatingBaseEstimatorDevice::open(yarp::os::Searchable& config)
     if (YarpUtilities::getElementFromSearchable(config, "sampling_period_in_s", devicePeriod))
     {
         setPeriod(devicePeriod);
+    }
+
+    if (!YarpUtilities::getElementFromSearchable(config, "publish_rostf", m_publishROSTF))
+    {
+        m_publishROSTF = false;
+    }
+
+    if (m_publishROSTF)
+    {
+        if (!loadTransformBroadcaster())
+        {
+            return false;
+        }
     }
 
     if (!setupRobotModel(config))
@@ -200,6 +214,10 @@ bool FloatingBaseEstimatorDevice::setupBaseEstimator(yarp::os::Searchable& confi
     {
         m_estimator = std::make_unique<InvariantEKFBaseEstimator>();
     }
+    else if (m_estimatorType == "DLGEKF")
+    {
+        m_estimator = std::make_unique<DLGEKFBaseEstimator>();
+    }
 
     std::shared_ptr<YarpImplementation> originalHandler = std::make_shared<YarpImplementation>();
     originalHandler->set(config);
@@ -226,6 +244,8 @@ bool FloatingBaseEstimatorDevice::attachAll(const yarp::dev::PolyDriverList & po
         yError() << "[FloatingBaseEstimatorDevice][attachAll] Could not open ports for publishing outputs.";
         return false;
     }
+
+        std::vector<std::string> cartesianWrenchesList;
 
     start();
     return true;
@@ -398,6 +418,13 @@ void FloatingBaseEstimatorDevice::publishBaseLinkState(const FloatingBaseEstimat
     for (size_t idx = rpyOffset; idx < linVelOffset; idx++) { stateVec(idx) = baseRPY(idx - rpyOffset); }
     for (size_t idx = linVelOffset; idx < angVelOffset; idx++) { stateVec(idx) = baseLinearVel(idx - linVelOffset); }
     for (size_t idx = angVelOffset; idx < stateVecSize; idx++) { stateVec(idx) = baseAngularVel(idx - angVelOffset); }
+
+    yarp::sig::Matrix basePoseYARP;
+    iDynTree::toYarp(estimatorOut.basePose, basePoseYARP);
+    if (!m_transformInterface->setTransform("/world", "/base_link", basePoseYARP))
+    {
+        yError() << "[FloatingBaseEstimatorDevice] Could not publish measured base pose transform from  primary IMU";
+    }
 
     m_comms.floatingBaseStatePort.write();
 

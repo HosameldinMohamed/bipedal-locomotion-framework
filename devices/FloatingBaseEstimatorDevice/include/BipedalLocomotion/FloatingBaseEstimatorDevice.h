@@ -66,6 +66,7 @@ private:
                              const std::string& portPrefix,
                              const std::string& address);
     void closeBufferedSigPort(yarp::os::BufferedPort<yarp::sig::Vector>& port);
+    bool loadTransformBroadcaster();
 
     struct
     {
@@ -88,9 +89,11 @@ private:
     std::string m_leftFootWrenchName{"left_foot_cartesian_wrench"};
     std::string m_rightFootWrenchName{"right_foot_cartesian_wrench"};
 
-    yarp::dev::PolyDriver m_transformBroadcaster;
-    yarp::dev::IFrameTransform* m_transformInterface{nullptr};
-    bool m_publishROSTF{false};
+
+    // optional
+    yarp::dev::PolyDriver  m_transformBroadcaster;
+    yarp::dev::IFrameTransform *m_transformInterface{nullptr};
+    bool m_publishROSTF{true};
 };
 
 
