@@ -35,7 +35,7 @@ struct InternalState
     Eigen::Vector3d accelerometerBias; /**< Bias of the accelerometer expressed in the IMU frame */
     Eigen::Vector3d gyroscopeBias; /**< Bias of the gyroscope expressed in the IMU frame */
 
-    void print()
+    void print() const
     {
         std::cout <<  "=== Base Estimator State ==="<< std::endl;
         std::cout << "IMU Quaternion xyz w: " << imuOrientation.coeffs().transpose() << std::endl;
@@ -84,4 +84,3 @@ struct Measurements
 } // namespace BipedalLocomotion
 
 #endif // BIPEDAL_LOCOMOTION_ESTIMATORS_FBE_IO_H
-

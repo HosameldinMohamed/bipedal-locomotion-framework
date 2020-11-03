@@ -20,6 +20,8 @@
 #include <cmath>
 #include <manif/manif.h>
 
+#include <random>
+
 using namespace BipedalLocomotion::Estimators;
 using namespace BipedalLocomotion::ParametersHandler;
 using namespace BipedalLocomotion::GenericContainer;
@@ -50,8 +52,8 @@ bool populateConfig(std::weak_ptr<IParametersHandler> handler, int nr_joints)
     auto sensorsdevGroup = std::make_shared<StdImplementation>();
     handle->setGroup("SensorsStdDev", sensorsdevGroup);
     IParametersHandler::shared_ptr sensdev_handler = sensorsdevGroup;
-    sensdev_handler->setParameter("accelerometer_measurement_noise_std_dev", std::vector<double>{0.0382, 0.01548, 0.0042});
-    sensdev_handler->setParameter("gyroscope_measurement_noise_std_dev", std::vector<double>{0.0111, 0.0024, 0.0043});
+    sensdev_handler->setParameter("accelerometer_measurement_noise_std_dev", std::vector<double>{0.004, 0.004, 0.004});
+    sensdev_handler->setParameter("gyroscope_measurement_noise_std_dev", std::vector<double>{0.005, 0.005, 0.005});
     sensdev_handler->setParameter("contact_foot_linear_velocity_noise_std_dev", std::vector<double>{9e-3, 9.5e-3, 7e-3});
     sensdev_handler->setParameter("contact_foot_angular_velocity_noise_std_dev", std::vector<double>{0.007, 0.0075, 0.004});
     sensdev_handler->setParameter("swing_foot_linear_velocity_noise_std_dev", std::vector<double>{0.05, 0.05, 0.05});
@@ -60,7 +62,7 @@ bool populateConfig(std::weak_ptr<IParametersHandler> handler, int nr_joints)
     std::vector<double> encoder_noise(nr_joints);
     for (auto& v : encoder_noise)
     {
-        v = 1e-6;
+        v = deg2rad(0.5);
     }
     sensdev_handler->setParameter("encoders_measurement_noise_std_dev", encoder_noise);
 
@@ -138,31 +140,51 @@ TEST_CASE("Invariant EKF Base Estimator")
     simImuQuat.normalize(); // normalize the user defined quaternion to respect internal tolerances for unit norm constraint
     simIMUPos << 0.0296, -0.1439,  0.4915;
 
+    std::mt19937 gen(42);
+
+    /** The noise is modelled as Gaussian vector with zero mean and diagonal covariance matrix */
+    std::normal_distribution<> accNoise{0, 0.004};
+    std::normal_distribution<> gyroNoise{0, 0.005};
+    std::normal_distribution<> encoderNoise{0, deg2rad(0.1)};
+
     // IMU measures
     Eigen::Vector3d acc, gyro;
-    acc << 0.0,   -7.9431,   -5.7513;
-    gyro << 0.0, 0.0, 0.0;
 
     // contact states
     bool lf_contact{true}, rf_contact{true};
 
     // kinematic measures
     Eigen::VectorXd encoders(joints_list.size()), encoder_speeds(joints_list.size());
-    encoders << -0.0001, 0.0000, 0.0000,
-    0.1570, 0.0003, -0.0000,
-    -0.0609, 0.4350, 0.1833, 0.5375,
-    -0.0609,    0.4349, 0.1834, 0.5375,
-    0.0895, 0.0090, -0.0027,
-    -0.5694, -0.3771, -0.0211,
-    0.0896, 0.0090, -0.0027,
-    -0.5695, -0.3771, -0.0211;
-
     encoder_speeds.setZero();
     FloatingBaseEstimators::Output out;
     manif::SO3Tangentd rotError;
     // set measurements and advance the estimator
     for (int i = 0; i < 10; i++)
     {
+        //static pose measurements
+        acc << 0.0,   -7.9431,   -5.7513;
+        gyro << 0.0, 0.0, 0.0;
+        encoders << -0.0001, 0.0000, 0.0000,
+                     0.1570, 0.0003, -0.0000,
+                    -0.0609, 0.4350, 0.1833, 0.5375,
+                    -0.0609, 0.4349, 0.1834, 0.5375,
+                     0.0895, 0.0090, -0.0027,
+                    -0.5694, -0.3771, -0.0211,
+                     0.0896, 0.0090, -0.0027,
+                    -0.5695, -0.3771, -0.0211;
+
+        // add noise to IMU measurements
+        for (int idx = 0; idx < 3; idx++)
+        {
+            acc(idx) += accNoise(gen);
+            gyro(idx) += gyroNoise(gen);
+        }
+        // add noise to encoder measurements
+        for (int idx = 0; idx < encoders.size(); idx++)
+        {
+            encoders(idx) += encoderNoise(gen);
+        }
+
         REQUIRE(estimator.setIMUMeasurement(acc, gyro));
         REQUIRE(estimator.setContacts(lf_contact, rf_contact));
         REQUIRE(estimator.setKinematics(encoders, encoder_speeds));
@@ -181,8 +203,8 @@ TEST_CASE("Invariant EKF Base Estimator")
         rotError = estR - simR; // performs logvee(R1.T R2)
     }
 
-    REQUIRE(rotError.weightedNorm() < 0.002);
-    REQUIRE((simIMUPos - out.state.imuPosition).norm() < 1e-3);
+    REQUIRE(rotError.weightedNorm() < 0.02);
+    REQUIRE((simIMUPos - out.state.imuPosition).norm() < 2e-2);
 
     // test reset methods
     out = estimator.get();
