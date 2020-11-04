@@ -421,9 +421,12 @@ void FloatingBaseEstimatorDevice::publishBaseLinkState(const FloatingBaseEstimat
 
     yarp::sig::Matrix basePoseYARP;
     iDynTree::toYarp(estimatorOut.basePose, basePoseYARP);
-    if (!m_transformInterface->setTransform("/world", "/base_link", basePoseYARP))
+    if (m_publishROSTF && m_transformInterface != nullptr)
     {
-        yError() << "[FloatingBaseEstimatorDevice] Could not publish measured base pose transform from  primary IMU";
+        if (!m_transformInterface->setTransform("/world", "/base_link", basePoseYARP))
+        {
+            yError() << "[FloatingBaseEstimatorDevice] Could not publish measured base pose transform from  primary IMU";
+        }
     }
 
     m_comms.floatingBaseStatePort.write();
