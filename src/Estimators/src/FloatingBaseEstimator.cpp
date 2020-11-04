@@ -101,6 +101,16 @@ bool FloatingBaseEstimator::advance()
         m_measPrev = m_meas;
     }
 
+    if (m_options.imuBiasEstimationEnabled && m_options.staticImuBiasInitializationEnabled)
+    {
+        if (!m_biasHandler.biasInitialized)
+        {
+            ok = ok && staticInitializeIMUBias();
+            return ok;
+        }
+    }
+
+
     ok = ok && predictState(m_measPrev, m_dt);
     if (m_options.ekfUpdateEnabled)
     {
@@ -732,3 +742,25 @@ bool FloatingBaseEstimator::resetEstimator(const FloatingBaseEstimators::Interna
     return true;
 }
 
+bool FloatingBaseEstimator::staticInitializeIMUBias()
+{
+    if (m_biasHandler.count < m_biasHandler.maxCount)
+    {
+        Eigen::Matrix3d R = m_state.imuOrientation.toRotationMatrix();
+        m_biasHandler.sumAcc += (m_meas.acc + (R.transpose()*m_options.accelerationDueToGravity));
+        m_biasHandler.sumGyro += m_meas.gyro;
+        m_biasHandler.count++;
+    }
+
+    if (m_biasHandler.count == m_biasHandler.maxCount)
+    {
+        m_state.accelerometerBias = m_biasHandler.sumAcc/m_biasHandler.maxCount;
+        m_state.gyroscopeBias = m_biasHandler.sumGyro/m_biasHandler.maxCount;
+
+        std::cout << "Acc bias: " << m_state.accelerometerBias.transpose() << std::endl;
+        std::cout << "Gyro bias: " << m_state.gyroscopeBias.transpose() << std::endl;
+        m_biasHandler.biasInitialized = true;
+    }
+
+    return true;
+}

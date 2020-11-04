@@ -372,6 +372,17 @@ protected:
 
     double m_dt{0.01}; /**< Fixed time step of the estimator, in seconds */
 
+    struct IMUBiasHandler
+    {
+        Eigen::Vector3d sumAcc;
+        Eigen::Vector3d sumGyro;
+        size_t count{0};
+        bool biasInitialized{false};
+        size_t maxCount{100};
+    };
+
+    IMUBiasHandler m_biasHandler;
+
 private:
     /**
     * Setup model related parameters
@@ -405,6 +416,8 @@ private:
                                      const FloatingBaseEstimators::Measurements& meas,
                                      iDynTree::Transform& basePose,
                                      iDynTree::Twist& baseTwist);
+
+    bool staticInitializeIMUBias();
 };
 
 
