@@ -91,10 +91,6 @@ public:
      */
     Pose iDynPose2manifPose(const iDynTree::Transform& Hdyn);
     /**
-     * Get manif SE3 object from Eigen quaternion and position
-     */
-    Pose eigenPose2manifPose(const Eigen::Quaterniond& q, const Position& p);
-    /**
      * Get manif SE3 object from Eigen 3d rotation matrix and position
      */
     Pose eigenPose2manifPose(const Eigen::Matrix3d& R, const Position& p);
@@ -104,17 +100,20 @@ public:
     const size_t m_vecSizeWOBias{IMUBipedMatrixLieGroupTangent::vecSizeWithoutBias()}; /**< Tangent space vector size without considering IMU biases */
     const size_t m_vecSizeWBias{IMUBipedMatrixLieGroupTangent::vecSizeWithBias()};  /**< Tangent space vector size considering IMU biases */
 
-    struct {
-    const size_t imuPosition{IMUBipedMatrixLieGroupTangent::basePositionOffset()};
-    const size_t imuOrientation{IMUBipedMatrixLieGroupTangent::baseOrientationOffset()};
-    const size_t imuLinearVel{IMUBipedMatrixLieGroupTangent::baseLinearVelocityOffset()};
-    const size_t lContactFramePosition{IMUBipedMatrixLieGroupTangent::leftFootContactPositionOffset()};
-    const size_t lContactFrameOrientation{IMUBipedMatrixLieGroupTangent::leftFootContactOrientationOffset()};
-    const size_t rContactFramePosition{IMUBipedMatrixLieGroupTangent::rightFootContactPositionOffset()};
-    const size_t rContactFrameOrientation{IMUBipedMatrixLieGroupTangent::rightFootContactOrientationOffset()};
-    const size_t accBias{IMUBipedMatrixLieGroupTangent::accelerometerBiasOffset()};
-    const size_t gyroBias{IMUBipedMatrixLieGroupTangent::gyroscopeBiasOffset()};
-    } m_vecOffsets;  /**< Tangent space vector offsets */
+    struct VecOffsets
+    {
+        const size_t imuPosition{IMUBipedMatrixLieGroupTangent::basePositionOffset()};
+        const size_t imuOrientation{IMUBipedMatrixLieGroupTangent::baseOrientationOffset()};
+        const size_t imuLinearVel{IMUBipedMatrixLieGroupTangent::baseLinearVelocityOffset()};
+        const size_t lContactFramePosition{IMUBipedMatrixLieGroupTangent::leftFootContactPositionOffset()};
+        const size_t lContactFrameOrientation{IMUBipedMatrixLieGroupTangent::leftFootContactOrientationOffset()};
+        const size_t rContactFramePosition{IMUBipedMatrixLieGroupTangent::rightFootContactPositionOffset()};
+        const size_t rContactFrameOrientation{IMUBipedMatrixLieGroupTangent::rightFootContactOrientationOffset()};
+        const size_t accBias{IMUBipedMatrixLieGroupTangent::accelerometerBiasOffset()};
+        const size_t gyroBias{IMUBipedMatrixLieGroupTangent::gyroscopeBiasOffset()};
+    };
+
+    VecOffsets m_vecOffsets;  /**< Tangent space vector offsets */
 
     friend class DLGEKFBaseEstimator;
 };
@@ -133,6 +132,7 @@ DLGEKFBaseEstimator::DLGEKFBaseEstimator() : m_pimpl(std::make_unique<Impl>())
 
     m_statePrev = m_state;
     m_estimatorOut.state = m_state;
+
 
     m_meas.acc.setZero();
     m_meas.gyro.setZero();
@@ -238,7 +238,7 @@ bool DLGEKFBaseEstimator::resetEstimator(const FloatingBaseEstimators::InternalS
 }
 
 bool DLGEKFBaseEstimator::predictState(const FloatingBaseEstimators::Measurements& meas,
-                                             const double& dt)
+                                       const double& dt)
 {
     Eigen::VectorXd Omegak;
     m_pimpl->calcOmegak(m_state, meas, dt,
@@ -350,11 +350,11 @@ bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measure
         deltaY.resize(measurementSpaceDims);
         Pose yLF = m_pimpl->iDynPose2manifPose(yIMU_H_LF);
         Pose hLF = m_pimpl->eigenPose2manifPose(A_R_IMU.transpose()*A_R_LF, A_R_IMU.transpose()*(plf - p));
-        auto lfPoseError = yLF - hLF; // this performs logvee_SE3(inv(hLF), yLF)
+        Twist lfPoseError = yLF - hLF; // this performs logvee_SE3(inv(hLF), yLF)
 
         Pose yRF = m_pimpl->iDynPose2manifPose(yIMU_H_RF);
         Pose hRF = m_pimpl->eigenPose2manifPose(A_R_IMU.transpose()*A_R_RF, A_R_IMU.transpose()*(prf - p));
-        auto rfPoseError = yRF - hRF; // this performs logvee_SE3(inv(hLF), yLF)
+        Twist rfPoseError = yRF - hRF; // this performs logvee_SE3(inv(hLF), yLF)
         deltaY << lfPoseError.coeffs(), rfPoseError.coeffs();
 
         // just aliasing using a reference
@@ -388,7 +388,6 @@ bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measure
             H.block<12, 6>(0, m_pimpl->m_vecOffsets.accBias).setZero();
         }
 
-
         // prepare measurement noise covariance R
         measNoiseVar.resize(measurementSpaceDims, measurementSpaceDims);
         measNoiseVar.topLeftCorner<6, 6>() = Jl*Renc*(Jl.transpose());
@@ -415,7 +414,7 @@ bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measure
         deltaY.resize(measurementSpaceDims);
         Pose yLF = m_pimpl->iDynPose2manifPose(yIMU_H_LF);
         Pose hLF = m_pimpl->eigenPose2manifPose(A_R_IMU.transpose()*A_R_LF, A_R_IMU.transpose()*(plf - p));
-        auto lfPoseError = yLF - hLF; // this performs logvee_SE3(inv(hLF), yLF)
+        Twist lfPoseError = yLF - hLF; // this performs logvee_SE3(inv(hLF), yLF)
         deltaY << lfPoseError.coeffs();
 
         // just aliasing using a reference
@@ -510,7 +509,7 @@ bool DLGEKFBaseEstimator::Impl::propagateStates(const Eigen::VectorXd& Omegak,
     IMUBipedMatrixLieGroupTangent v(Omegak);
 
     auto exphatv = v.exp();
-    IMUBipedMatrixLieGroup Xk;
+    IMUBipedMatrixLieGroup Xk(estimateBias);
     constructStateLieGroup(X, estimateBias, Xk);
     auto M = Xk*exphatv;
 
@@ -572,8 +571,8 @@ bool DLGEKFBaseEstimator::Impl::updateStates(const Eigen::VectorXd& deltaY,
 }
 
 void DLGEKFBaseEstimator::Impl::extractStateVar(const Eigen::MatrixXd& P,
-                                                      const bool& estimateBias,
-                                                      FloatingBaseEstimators::StateStdDev& stateStdDev)
+                                                const bool& estimateBias,
+                                                FloatingBaseEstimators::StateStdDev& stateStdDev)
 {
     stateStdDev.imuPosition =  P.block<3, 3>(m_vecOffsets.imuPosition, m_vecOffsets.imuPosition).diagonal().array().sqrt();
     stateStdDev.imuOrientation =  P.block<3, 3>(m_vecOffsets.imuOrientation, m_vecOffsets.imuOrientation).diagonal().array().sqrt();
@@ -829,16 +828,11 @@ void DLGEKFBaseEstimator::Impl::calcOmegak(const FloatingBaseEstimators::Interna
 }
 
 
-Pose DLGEKFBaseEstimator::Impl::eigenPose2manifPose(const Eigen::Quaterniond& q,
-                                                    const Position& p)
-{
-    return Pose(p, q);
-}
-
 Pose DLGEKFBaseEstimator::Impl::eigenPose2manifPose(const Eigen::Matrix3d& R,
                                                     const Position& p)
 {
     Eigen::Quaterniond q = Eigen::Quaterniond(R);
+    q.normalize();
     return Pose(p, q);
 }
 
@@ -847,6 +841,8 @@ Pose DLGEKFBaseEstimator::Impl::iDynPose2manifPose(const iDynTree::Transform& Hd
 {
     Position p = iDynTree::toEigen(Hdyn.getPosition());
     Eigen::Quaterniond q = Eigen::Quaterniond(iDynTree::toEigen(Hdyn.getRotation()));
+    q.normalize();
     return Pose(p, q);
 }
+
 
