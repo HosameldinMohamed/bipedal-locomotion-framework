@@ -6,11 +6,13 @@
  */
 
 #include <BipedalLocomotion/FloatingBaseEstimators/LeggedOdometry.h>
+#include <BipedalLocomotion/Conversions/ManifConversions.h>
 #include <iDynTree/Core/EigenHelpers.h>
 
 #include <manif/manif.h>
 
 using namespace BipedalLocomotion::Estimators;
+using namespace BipedalLocomotion::Conversions;
 
 class LeggedOdometry::Impl
 {
@@ -177,7 +179,12 @@ bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements
     {
         m_pimpl->currentFixedFrameIdx = m_pimpl->initialFixedFrameIdx;
 
-
+        manif::SE3d refFrame_H_fixedFrame  = toManifPose(modelComputations().kinDyn().
+                                                         getRelativeTransform(m_pimpl->initialRefFrameForWorldIdx,
+                                                                              m_pimpl->initialFixedFrameIdx));
+        manif::SE3d fixedFrame_H_base = toManifPose(modelComputations().kinDyn().
+                                                    getRelativeTransform(m_pimpl->initialFixedFrameIdx,
+                                                                         modelComputations().baseLinkIdx()));
 
         m_pimpl->prevFixedFrameIdx = m_pimpl->currentFixedFrameIdx;
         m_pimpl->odometryInitialized = true;
