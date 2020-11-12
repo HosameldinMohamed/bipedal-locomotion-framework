@@ -120,6 +120,7 @@ public:
         const std::string& rightFootContactFrame() const { return m_rFootContactFrame; }
         const iDynTree::Transform& base_H_IMU() const { return m_base_H_imu; }
         const bool& isModelSet() const { return m_modelSet; }
+        iDynTree::KinDynComputations& kinDyn()  { return m_kindyn; }
 
     private:
         std::string m_baseLink{""}; /**< name of the floating base link*/
@@ -194,7 +195,7 @@ public:
      *
      * @note reset and advance estimator to get updated estimator output
      */
-    virtual bool resetEstimator(const FloatingBaseEstimators::InternalState& newState) final;
+    virtual bool resetEstimator(const FloatingBaseEstimators::InternalState& newState);
 
     /**
      * Reset the base pose estimate and consequently the internal state of the estimator
@@ -205,7 +206,7 @@ public:
      * * @note reset and advance estimator to get updated estimator output
      */
     virtual bool resetEstimator(const Eigen::Quaterniond& newBaseOrientation,
-                                const Eigen::Vector3d& newBasePosition) final;
+                                const Eigen::Vector3d& newBasePosition);
 
     /**
     * Get estimator outputs
