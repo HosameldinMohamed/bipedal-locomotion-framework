@@ -13,7 +13,7 @@
 
 using namespace BipedalLocomotion::Estimators;
 using namespace BipedalLocomotion::ParametersHandler;
-using namespace BipedalLocomotion::Planners;
+using namespace BipedalLocomotion::Contacts;
 
 TEST_CASE("Schmitt Trigger Detector")
 {
@@ -63,7 +63,7 @@ TEST_CASE("Schmitt Trigger Detector")
     REQUIRE(!rightContact.isActive);
 
     // add a new contact
-    Contact newContact;
+    EstimatedContact newContact;
     SchmittTriggerParams params;
     params.offThreshold = 10;
     params.onThreshold = 100;

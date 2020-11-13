@@ -10,7 +10,7 @@
 
 #include <BipedalLocomotion/System/Advanceable.h>
 #include <BipedalLocomotion/ParametersHandler/IParametersHandler.h>
-#include <BipedalLocomotion/Planners/Contact.h>
+#include <BipedalLocomotion/Contacts/Contact.h>
 
 #include <iostream>
 #include <unordered_map>
@@ -20,7 +20,7 @@ namespace BipedalLocomotion
 namespace Estimators
 {
 
-using ContactStates = std::unordered_map<std::string, BipedalLocomotion::Planners::Contact>;
+using ContactStates = std::unordered_map<std::string, BipedalLocomotion::Contacts::EstimatedContact>;
 
 class ContactDetector : public BipedalLocomotion::System::Advanceable<ContactStates>
 {
@@ -60,7 +60,7 @@ public:
      * @param[in] contactName name of contact
      * @return contact state if contact exists, false otherwise
      */
-    BipedalLocomotion::Planners::Contact get(const std::string& contactName);
+    BipedalLocomotion::Contacts::EstimatedContact get(const std::string& contactName);
 
     /**
     * Determines the validity of the object retrieved with get()
