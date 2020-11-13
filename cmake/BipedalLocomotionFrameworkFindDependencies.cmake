@@ -177,6 +177,10 @@ framework_dependent_option(FRAMEWORK_COMPILE_Estimators
 framework_dependent_option(FRAMEWORK_COMPILE_Contact
   "Compile Contact libraries?" ON
   "FRAMEWORK_USE_manif" OFF)
+  
+framework_dependent_option(FRAMEWORK_COMPILE_Contacts
+  "Compile Contacts libraries?" ON
+  "FRAMEWORK_USE_manif" OFF)  
 
 framework_dependent_option(FRAMEWORK_COMPILE_Planners
   "Compile Planners libraries?" ON
