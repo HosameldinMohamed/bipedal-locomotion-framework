@@ -9,7 +9,7 @@
 
 using namespace BipedalLocomotion::Estimators;
 using namespace BipedalLocomotion::ParametersHandler;
-using namespace BipedalLocomotion::Planners;
+using namespace BipedalLocomotion::Contacts;
 
 class SchmittTriggerDetector::Impl
 {
@@ -189,7 +189,7 @@ bool SchmittTriggerDetector::addContact(const std::string& contactName,
         return false;
     }
 
-    Contact newContact;
+    EstimatedContact newContact;
     newContact.isActive = initialState;
     newContact.name = contactName;
 
@@ -232,8 +232,8 @@ bool SchmittTriggerDetector::resetContact(const std::string& contactName,
     m_pimpl->manager.at(contactName).first = params;
     m_pimpl->forceMeasure.at(contactName) = std::make_pair(0.0, 0.);
     m_contactStates.at(contactName).isActive = state;
-    m_contactStates.at(contactName).activationTime = 0.0;
-    m_contactStates.at(contactName).deactivationTime = 0.0;
+    m_contactStates.at(contactName).switchTime = 0.0;
+
     return true;
 }
 

@@ -8,7 +8,7 @@
 #include <BipedalLocomotion/ContactDetectors/ContactDetector.h>
 using namespace BipedalLocomotion::ParametersHandler;
 using namespace BipedalLocomotion::Estimators;
-using namespace BipedalLocomotion::Planners;
+using namespace BipedalLocomotion::Contacts;
 
 bool ContactDetector::initialize(std::weak_ptr<IParametersHandler> handler)
 {
@@ -68,8 +68,7 @@ bool ContactDetector::resetContacts()
 {
     for (auto& [name, contact] : m_contactStates)
     {
-        contact.deactivationTime = 0.0;
-        contact.activationTime = 0.0;
+        contact.switchTime = 0.0;
         contact.isActive = false;
     }
     return true;
@@ -81,11 +80,11 @@ const ContactStates& ContactDetector::get() const
     return m_contactStates;
 }
 
-Contact ContactDetector::get(const std::string& contactName)
+EstimatedContact ContactDetector::get(const std::string& contactName)
 {
     if ( m_contactStates.find(contactName) == m_contactStates.end() )
     {
-        return Contact();
+        return EstimatedContact();
     }
 
     return m_contactStates.at(contactName);
