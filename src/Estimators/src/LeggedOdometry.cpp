@@ -18,22 +18,25 @@ class LeggedOdometry::Impl
 {
 public:
 
+    bool changeFixedFrame(const iDynTree::FrameIndex& newIdx,
+                          iDynTree::KinDynComputations& kinDyn);
     void updateInternalState();
 
 
     // parameters
-    std::string initialFixedFrame; /**<  Fixed frame at initialization assumed to be in rigid contact with the environment*/
-    std::string initialRefFrameForWorld; /**< Reference frame for the world at initialization */
-    iDynTree::FrameIndex initialFixedFrameIdx{iDynTree::FRAME_INVALID_INDEX};  /**< Index of fixed frame at initialization */
-    iDynTree::FrameIndex initialRefFrameForWorldIdx{iDynTree::FRAME_INVALID_INDEX};  /**< Index of world reference frame at initialization */
-    manif::SE3d refFrame_H_world; /**< pose of world wrt reference frame at initialization */
+    std::string m_initialFixedFrame; /**<  Fixed frame at initialization assumed to be in rigid contact with the environment*/
+    std::string m_initialRefFrameForWorld; /**< Reference frame for the world at initialization */
+    iDynTree::FrameIndex m_initialFixedFrameIdx{iDynTree::FRAME_INVALID_INDEX};  /**< Index of fixed frame at initialization */
+    iDynTree::FrameIndex m_initialRefFrameForWorldIdx{iDynTree::FRAME_INVALID_INDEX};  /**< Index of world reference frame at initialization */
+    manif::SE3d m_refFrame_H_world; /**< pose of world wrt reference frame at initialization */
 
-    bool odometryInitialized{false}; /**< flag to check if odometry was initialized */
-    bool flatFloor{false}; /**< flag to enable flat floor constraint */
+    bool m_odometryInitialized{false}; /**< flag to check if odometry was initialized */
+//     bool m_flatFloor{false}; /**< flag to enable flat floor constraint */
 
-    iDynTree::FrameIndex prevFixedFrameIdx;
-    iDynTree::FrameIndex currentFixedFrameIdx;
+    iDynTree::FrameIndex m_prevFixedFrameIdx;
+    iDynTree::FrameIndex m_currentFixedFrameIdx;
 
+    manif::SE3d m_world_H_fixedFrame; /**< Pose of fixed frame wrt world */
     friend class LeggedOdometry;
 };
 
@@ -73,7 +76,7 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
         return false;
     }
 
-    if (!handle->getParameter("initial_fixed_frame", m_pimpl->initialFixedFrame))
+    if (!handle->getParameter("initial_fixed_frame", m_pimpl->m_initialFixedFrame))
     {
         std::cerr <<  printPrefix <<
         "The parameter handler could not find \" initial_fixed_frame \" in the configuration file."
@@ -82,8 +85,8 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
     }
     else
     {
-        m_pimpl->initialFixedFrameIdx = m_modelComp.kinDyn().model().getFrameIndex(m_pimpl->initialFixedFrame);
-        if (m_pimpl->initialFixedFrameIdx == iDynTree::FRAME_INVALID_INDEX)
+        m_pimpl->m_initialFixedFrameIdx = m_modelComp.kinDyn().model().getFrameIndex(m_pimpl->m_initialFixedFrame);
+        if (m_pimpl->m_initialFixedFrameIdx == iDynTree::FRAME_INVALID_INDEX)
         {
             std::cerr << printPrefix << "Specified fixed frame not available in the loaded URDF Model."
             << std::endl;
@@ -98,12 +101,12 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
         std::cerr << printPrefix <<
         "The parameter handler could not find \"initial_ref_frame_for_world \" in the configuration file. Setting \"initial_fixed_frame\" as reference frame for world"
         << std::endl;
-        m_pimpl->initialRefFrameForWorld = m_pimpl->initialFixedFrame;
+        m_pimpl->m_initialRefFrameForWorld = m_pimpl->m_initialFixedFrame;
     }
     else
     {
-        m_pimpl->initialRefFrameForWorldIdx = m_modelComp.kinDyn().model().getFrameIndex(m_pimpl->initialRefFrameForWorld);
-        if (m_pimpl->initialRefFrameForWorldIdx == iDynTree::FRAME_INVALID_INDEX)
+        m_pimpl->m_initialRefFrameForWorldIdx = m_modelComp.kinDyn().model().getFrameIndex(m_pimpl->m_initialRefFrameForWorld);
+        if (m_pimpl->m_initialRefFrameForWorldIdx == iDynTree::FRAME_INVALID_INDEX)
         {
             std::cerr << printPrefix << "Specified reference frame for world not available in the loaded URDF Model."
             << std::endl;
@@ -127,18 +130,19 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
     refFrame_quat_world.normalize();
     Eigen::Vector3d refFrame_p_world;
     refFrame_p_world << initialWorldPositionInRefFrame[0], initialWorldPositionInRefFrame[1], initialWorldPositionInRefFrame[2];
-    m_pimpl->refFrame_H_world = manif::SE3d(refFrame_p_world, refFrame_quat_world);
+    m_pimpl->m_refFrame_H_world = manif::SE3d(refFrame_p_world, refFrame_quat_world);
 
-    if (!handle->getParameter("flat_floor", m_pimpl->flatFloor))
-    {
-        std::cerr << printPrefix <<
-        "The parameter handler could not find \" flat_floor \" in the configuration file. Setting to false."
-        << std::endl;
-        m_pimpl->flatFloor = false;
-    }
+//     if (!handle->getParameter("flat_floor", m_pimpl->m_flatFloor))
+//     {
+//         std::cerr << printPrefix <<
+//         "The parameter handler could not find \" flat_floor \" in the configuration file. Setting to false."
+//         << std::endl;
+//         m_pimpl->m_flatFloor = false;
+//     }
 
     return true;
 }
+
 
 
 bool LeggedOdometry::resetEstimator()
@@ -148,6 +152,9 @@ bool LeggedOdometry::resetEstimator()
 
 void LeggedOdometry::Impl::updateInternalState()
 {
+//            manif::SE3d fixedFrame_H_base = toManifPose(modelComputations().kinDyn().
+//                                                     getRelativeTransform(m_pimpl->initialFixedFrameIdx,
+//                                                                          modelComputations().baseLinkIdx()));
 }
 
 bool LeggedOdometry::resetEstimator(const FloatingBaseEstimators::InternalState& newState)
@@ -175,25 +182,46 @@ bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements
         return false;
     }
 
-    if (!m_pimpl->odometryInitialized)
+    if (!m_pimpl->m_odometryInitialized)
     {
-        m_pimpl->currentFixedFrameIdx = m_pimpl->initialFixedFrameIdx;
+        m_pimpl->m_currentFixedFrameIdx = m_pimpl->m_initialFixedFrameIdx;
 
         manif::SE3d refFrame_H_fixedFrame  = toManifPose(modelComputations().kinDyn().
-                                                         getRelativeTransform(m_pimpl->initialRefFrameForWorldIdx,
-                                                                              m_pimpl->initialFixedFrameIdx));
-        manif::SE3d fixedFrame_H_base = toManifPose(modelComputations().kinDyn().
-                                                    getRelativeTransform(m_pimpl->initialFixedFrameIdx,
-                                                                         modelComputations().baseLinkIdx()));
+                                                         getRelativeTransform(m_pimpl->m_initialRefFrameForWorldIdx,
+                                                                              m_pimpl->m_initialFixedFrameIdx));
 
-        m_pimpl->prevFixedFrameIdx = m_pimpl->currentFixedFrameIdx;
-        m_pimpl->odometryInitialized = true;
+        m_pimpl->m_world_H_fixedFrame = m_pimpl->m_refFrame_H_world.inverse()*refFrame_H_fixedFrame;
+
+        m_pimpl->m_prevFixedFrameIdx = m_pimpl->m_currentFixedFrameIdx;
+        m_pimpl->m_odometryInitialized = true;
         return true;
     }
+
+    // change fixed frame depending on switch times
+    // remove contacts if outdated
+    // update states
 
     return true;
 }
 
 
+bool LeggedOdometry::Impl::changeFixedFrame(const iDynTree::FrameIndex& newIdx,
+                                            iDynTree::KinDynComputations& kinDyn)
+{
+    const std::string_view printPrefix = "[LeggedOdometry::changeFixedFrame] ";
+    if (newIdx == iDynTree::FRAME_INVALID_INDEX)
+    {
+        std::cerr << printPrefix << "Specified frame index not available in the loaded URDF Model."
+            << std::endl;
+            return false;
+    }
+
+    manif::SE3d oldFixed_H_newFixed  = toManifPose(kinDyn.getRelativeTransform(m_currentFixedFrameIdx, newIdx));
+    m_world_H_fixedFrame = m_world_H_fixedFrame*oldFixed_H_newFixed;
+    m_prevFixedFrameIdx = m_currentFixedFrameIdx;
+    m_currentFixedFrameIdx = newIdx;
+
+    return true;
+}
 
 
