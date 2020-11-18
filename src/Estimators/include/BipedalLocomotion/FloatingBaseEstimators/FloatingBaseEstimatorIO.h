@@ -12,6 +12,9 @@
 #include <iDynTree/Core/Transform.h>
 #include <iDynTree/Core/Twist.h>
 
+#include <BipedalLocomotion/Contacts/Contact.h>
+#include <unordered_map>
+
 namespace BipedalLocomotion
 {
 namespace Estimators
@@ -34,6 +37,8 @@ struct InternalState
     Eigen::Vector3d rContactFramePosition; /**< Position of the right foot contact frame in the inertial frame*/
     Eigen::Vector3d accelerometerBias; /**< Bias of the accelerometer expressed in the IMU frame */
     Eigen::Vector3d gyroscopeBias; /**< Bias of the gyroscope expressed in the IMU frame */
+
+    std::unordered_map<int, BipedalLocomotion::Contacts::EstimatedContact> supportFrameData; /**< contact measurements */
 };
 
 /**

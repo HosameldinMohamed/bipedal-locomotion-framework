@@ -17,6 +17,7 @@
 #include <iDynTree/KinDynComputations.h>
 #include <iDynTree/Model/JointState.h>
 #include <iostream>
+#include <unordered_map>
 
 namespace BipedalLocomotion
 {
@@ -155,6 +156,7 @@ public:
     * @return True in case of success, false otherwise.
     */
     bool initialize(std::weak_ptr<BipedalLocomotion::ParametersHandler::IParametersHandler> handler, const iDynTree::Model& model);
+    
 
     /**
     * Set the polled IMU measurement
@@ -172,6 +174,23 @@ public:
     * @return True in case of success, false otherwise.
     */
     bool setContacts(const bool& lfInContact, const bool& rfInContact);
+
+    /**
+    * set contact measurements and timing,
+    * This updates the fields if contact already exists , otherwise adds a new contact to contact state container
+    * @param[in] idx contact frame index
+    * @param[in] timedContact (contact state, switching time) measurement pair
+    * @param[in] time_now  time of measurement update
+    */
+    bool setTimeContactPair(const int& idx, const std::pair<bool, double> & timedContact, const double& time_now);
+
+    /**
+    * set contact measurements and timing,
+    * This updates the fields if contact already exists , otherwise adds a new contact to contact state container
+    * @param[in] timedContacts a container of (contact state, switching time)  measurement pairs
+    * @param[in] time_now  time of measurement update
+    */
+    bool setTimeContactPairs(const std::unordered_map<int, std::pair<bool, double> >& timedContacts, const double& time_now);
 
     /**
     * Set kinematic measurements

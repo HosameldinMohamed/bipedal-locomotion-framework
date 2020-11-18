@@ -300,6 +300,45 @@ bool FloatingBaseEstimator::setContacts(const bool& lfInContact,
     return true;
 }
 
+bool FloatingBaseEstimator::setTimeContactPairs(const std::unordered_map<int, std::pair<bool, double> >& timedContacts, const double& time_now)
+{
+    for (const auto& [idx, pair] : timedContacts )
+    {
+        if (!setTimeContactPair(idx, pair, time_now))
+        {
+            continue;
+        }
+    }
+
+    return true;
+}
+
+bool FloatingBaseEstimator::setTimeContactPair(const int& idx, const std::pair<bool, double>& timedContact, const double& time_now)
+{
+    auto& contactStates = m_state.supportFrameData;
+    if (!m_modelComp.kinDyn().model().isValidFrameIndex(idx))
+    {
+        std::cerr << "[FloatingBaseEstimator::setTimeContactPair] Contact frame index: " << idx
+        << " not found in loaded model, skipping measurement." << std::endl;
+        return false;
+    }
+
+    if (contactStates.find(idx) != contactStates.end())
+    {
+        contactStates.at(idx).setTimedContact(timedContact);
+        contactStates.at(idx).lastUpdateTime = time_now;
+    }
+    else
+    {
+        BipedalLocomotion::Contacts::EstimatedContact newContact;
+        newContact.setTimedContact(timedContact);
+        newContact.lastUpdateTime = time_now;
+        contactStates[idx] = newContact;
+    }
+    return true;
+}
+
+
 FloatingBaseEstimator::ModelComputations& FloatingBaseEstimator::modelComputations()
 {
     return m_modelComp;
