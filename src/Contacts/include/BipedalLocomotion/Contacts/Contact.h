@@ -49,6 +49,11 @@ struct ContactBase
     std::string name {"Contact"};
 
     /**
+     * Frame index of the contact
+     */
+    int index{-1};
+
+    /**
      * Type of contact.
      */
     ContactType type {ContactType::FULL};
@@ -74,7 +79,7 @@ struct PlannedContact : ContactBase
 /**
  * @brief Definition of an Estimated Contact structure
  */
-struct EstimatedContact : ContactBase 
+struct EstimatedContact : ContactBase
 {
 
     /**
@@ -87,6 +92,22 @@ struct EstimatedContact : ContactBase
      */
     bool isActive{false};
 
+    /**
+     * Time at which the contact details were last updated
+     * This field helps in forgetting contacts
+     */
+    double lastUpdateTime{0.0};
+
+    std::pair<bool, double> getTimedContact()
+    {
+        return std::make_pair(isActive, switchTime);
+    }
+
+    void setTimedContact(const std::pair<bool, double>& pair)
+    {
+        isActive = pair.first;
+        switchTime = pair.second;
+    }
 };
 
 

@@ -149,7 +149,14 @@ public:
      * @return state - true/false
      */
     bool getState();
-
+    
+    /**
+     * Get the current state of the Schmitt trigger
+     * @param[out] swtichTime
+     * @return state - true/false
+     */
+    bool getState(double& switchTime);
+    
     /**
      * Get currently configuration of Schmitt trigger
      * @return struct holding the parameters
@@ -159,6 +166,7 @@ public:
 private:
     SchmittTriggerParams params; /**< Schmitt Trigger parameters*/
     bool state{false}; /**< current state*/
+    double switchTime{0.}; /**> time instant at which the state was toggled */
     double previousTime{0.}; /**< previous update time*/
     double timer{0.}; /**< elapsed timer for current state*/
 };

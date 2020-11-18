@@ -125,11 +125,11 @@ bool SchmittTriggerDetector::updateContactStates()
     {
         auto& contact = m_contactStates.at(contactName);
         auto& detectorUnit =  m_pimpl->manager.at(contactName);
-        auto prevState = contact.isActive;
+        
         const auto& measure = m_pimpl->forceMeasure.at(contactName);
         detectorUnit.second.update(measure.first, measure.second);
 
-        contact.isActive = detectorUnit.second.getState();
+        contact.isActive = detectorUnit.second.getState(contact.switchTime);        
     }
     return true;
 }
@@ -256,7 +256,7 @@ void SchmittTriggerUnit::reset()
 {
     timer = 0.;
     previousTime = 0.;
-
+    switchTime = 0.;
     state = false;
 }
 
@@ -271,7 +271,13 @@ void SchmittTriggerUnit::setState(const bool& stateIn)
 }
 
 bool SchmittTriggerUnit::getState()
+{    
+    return state;
+}
+
+bool SchmittTriggerUnit::getState(double& switchTimeIn)
 {
+    switchTimeIn = switchTime;
     return state;
 }
 
@@ -295,6 +301,8 @@ void SchmittTriggerUnit::update(const double& currentTime, const double& rawValu
             (timer >= params.switchOnAfter) ?  state = true : timer += (currentTime - previousTime);
             if (state)
             {
+                switchTime = currentTime;
+                std::cout << "Switch time: " << switchTime << std::endl;
                 timer = 0;
             }
         }
@@ -311,6 +319,8 @@ void SchmittTriggerUnit::update(const double& currentTime, const double& rawValu
             (timer >= params.switchOffAfter) ? state = false : timer += (currentTime - previousTime);
             if (!state)
             {
+                switchTime = currentTime;
+                std::cout << "Switch time: " << switchTime << std::endl;
                 timer = 0;
             }
         }
