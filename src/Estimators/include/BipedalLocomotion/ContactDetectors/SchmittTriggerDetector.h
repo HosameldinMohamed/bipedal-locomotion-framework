@@ -49,18 +49,32 @@ public:
      * @return True in case of success, false otherwise.
      */
     bool setTimedContactIntensities(const std::unordered_map<std::string, std::pair<double, double>>& timedForces);
-
+    
     /**
-     * Add a contact whose contact state need to be tracked
+     * Add a contact whose contact state need to be tracked with initial time = 0
      * @param[in] contactName name of the contact
      * @param[in] initialState initial contact state
-     * @param[in] params Schmitt Trigger parameters
+     * @param[in] params Schmitt Trigger parameters     
      * @note this method does not reset the state and parameters if the contact already exists
      * @return True in case of success, false otherwise.
      */
     bool addContact(const std::string& contactName,
                     const bool& initialState,
                     const SchmittTriggerParams& params);
+
+    /**
+     * Add a contact whose contact state need to be tracked
+     * @param[in] contactName name of the contact
+     * @param[in] initialState initial contact state
+     * @param[in] params Schmitt Trigger parameters
+     * @param[in] time_now current time instant to initialize the Schmitt trigger timers
+     * @note this method does not reset the state and parameters if the contact already exists
+     * @return True in case of success, false otherwise.
+     */
+    bool addContact(const std::string& contactName,
+                    const bool& initialState,
+                    const SchmittTriggerParams& params,
+                    const double& time_now);
 
     /**
      * Reset a contact's parameters
@@ -124,6 +138,13 @@ public:
      * @param state current state
      */
     void setState(const bool& state);
+    
+    /**
+     * Set current state  of the Schmitt trigger
+     * @param state current state
+     * @param time_now time unit to set the timer parameters
+     */
+    void setState(const bool& state, const double& time_now);
 
     /**
      * Set configuration parameters of the Schmitt trigger
@@ -169,6 +190,7 @@ private:
     double switchTime{0.}; /**> time instant at which the state was toggled */
     double previousTime{0.}; /**< previous update time*/
     double timer{0.}; /**< elapsed timer for current state*/
+    double initialTime{0.}; /**< initialization time*/
 };
 
 } // namespace Estimators

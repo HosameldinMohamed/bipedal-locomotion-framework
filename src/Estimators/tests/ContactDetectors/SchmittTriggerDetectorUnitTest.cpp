@@ -72,7 +72,7 @@ TEST_CASE("Schmitt Trigger Detector")
     params.switchOffAfter = 0.2;
     params.switchOnAfter = 0.2;
 
-    detector.addContact("left", false, params);
+    detector.addContact("left", false, params, 0.6);
     auto contacts = detector.get();
     REQUIRE(contacts.size() == 2);
 

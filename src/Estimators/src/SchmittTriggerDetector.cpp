@@ -182,6 +182,16 @@ bool SchmittTriggerDetector::addContact(const std::string& contactName,
                                         const bool& initialState,
                                         const SchmittTriggerParams& params)
 {
+    double initialTime{0.0};
+    addContact(contactName, initialState, params, initialTime);
+    return true;
+}
+
+bool SchmittTriggerDetector::addContact(const std::string& contactName,
+                                        const bool& initialState,
+                                        const SchmittTriggerParams& params,
+                                        const double& time_now)
+{
     std::string_view printPrefix = "[SchmittTriggerDetector::addContact] ";
     if (m_pimpl->contactExists(contactName))
     {
@@ -195,7 +205,7 @@ bool SchmittTriggerDetector::addContact(const std::string& contactName,
 
     SchmittTriggerUnit schmittTrigger;
     schmittTrigger.setParams(params);
-    schmittTrigger.setState(initialState);
+    schmittTrigger.setState(initialState, time_now);
 
     m_pimpl->manager[contactName] = std::make_pair(params, schmittTrigger);
     m_pimpl->forceMeasure[contactName] = std::make_pair(0.0, 0.0);
@@ -255,8 +265,8 @@ bool SchmittTriggerDetector::Impl::contactExists(const std::string& contactName)
 void SchmittTriggerUnit::reset()
 {
     timer = 0.;
-    previousTime = 0.;
-    switchTime = 0.;
+    previousTime = initialTime;
+    switchTime = initialTime;
     state = false;
 }
 
@@ -268,6 +278,13 @@ void SchmittTriggerUnit::setParams(const SchmittTriggerParams& paramsIn)
 void SchmittTriggerUnit::setState(const bool& stateIn)
 {
     state = stateIn;
+}
+
+void SchmittTriggerUnit::setState(const bool& stateIn, const double& initiaTimeIn)
+{
+    state = stateIn;
+    initialTime = initiaTimeIn;
+    reset();
 }
 
 bool SchmittTriggerUnit::getState()
@@ -288,9 +305,9 @@ SchmittTriggerParams SchmittTriggerUnit::getParams()
 
 void SchmittTriggerUnit::update(const double& currentTime, const double& rawValue)
 {
-    if (previousTime == 0)
+    if (previousTime == initialTime)
     {
-        (currentTime > 0) ? previousTime = 0 : previousTime = currentTime;
+        (currentTime > initialTime) ? previousTime = initialTime : previousTime = currentTime;
     }
 
     if (!state)
