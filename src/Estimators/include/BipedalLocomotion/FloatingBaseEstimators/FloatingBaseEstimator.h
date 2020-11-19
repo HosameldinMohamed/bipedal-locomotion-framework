@@ -117,6 +117,7 @@ public:
         const int& nrJoints() const { return m_nrJoints; }
         const std::string& baseLink() const { return m_baseLink; }
         const iDynTree::FrameIndex& baseLinkIdx() const { return m_baseLinkIdx; }
+        const iDynTree::FrameIndex& baseIMUIdx() const { return m_baseImuIdx; }
         const std::string& baseLinkIMU() const { return m_baseImuFrame; }
         const std::string& leftFootContactFrame() const { return m_lFootContactFrame; }
         const std::string& rightFootContactFrame() const { return m_rFootContactFrame; }

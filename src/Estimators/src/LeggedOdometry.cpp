@@ -13,6 +13,7 @@
 
 using namespace BipedalLocomotion::Estimators;
 using namespace BipedalLocomotion::Conversions;
+using namespace BipedalLocomotion::Contacts;
 
 class LeggedOdometry::Impl
 {
@@ -20,8 +21,10 @@ public:
 
     bool changeFixedFrame(const iDynTree::FrameIndex& newIdx,
                           iDynTree::KinDynComputations& kinDyn);
-    void updateInternalState();
-
+    void updateInternalState(FloatingBaseEstimator::ModelComputations& modelComp,
+                             FloatingBaseEstimators::InternalState& state);
+    iDynTree::FrameIndex getLatestContact(const std::unordered_map<int, EstimatedContact>& contacts);
+    void resetInternal(FloatingBaseEstimator::ModelComputations& modelComp);
 
     // parameters
     std::string m_initialFixedFrame; /**<  Fixed frame at initialization assumed to be in rigid contact with the environment*/
@@ -31,13 +34,11 @@ public:
     manif::SE3d m_refFrame_H_world; /**< pose of world wrt reference frame at initialization */
 
     bool m_odometryInitialized{false}; /**< flag to check if odometry was initialized */
-//     bool m_flatFloor{false}; /**< flag to enable flat floor constraint */
 
-    iDynTree::FrameIndex m_prevFixedFrameIdx;
-    iDynTree::FrameIndex m_currentFixedFrameIdx;
+    iDynTree::FrameIndex m_prevFixedFrameIdx{iDynTree::FRAME_INVALID_INDEX};
+    iDynTree::FrameIndex m_currentFixedFrameIdx{iDynTree::FRAME_INVALID_INDEX};
 
-    manif::SE3d m_world_H_fixedFrame; /**< Pose of fixed frame wrt world */
-    friend class LeggedOdometry;
+    manif::SE3d m_world_H_fixedFrame; /**< Pose of fixed frame wrt world */    
 };
 
 LeggedOdometry::LeggedOdometry() : m_pimpl(std::make_unique<Impl>())
@@ -60,7 +61,7 @@ LeggedOdometry::LeggedOdometry() : m_pimpl(std::make_unique<Impl>())
     m_meas.lfInContact = false;
     m_meas.rfInContact = false;
 
-    m_measPrev = m_meas;
+    m_measPrev = m_meas;    
 }
 
 LeggedOdometry::~LeggedOdometry() = default;
@@ -132,50 +133,138 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
     refFrame_p_world << initialWorldPositionInRefFrame[0], initialWorldPositionInRefFrame[1], initialWorldPositionInRefFrame[2];
     m_pimpl->m_refFrame_H_world = manif::SE3d(refFrame_p_world, refFrame_quat_world);
 
-//     if (!handle->getParameter("flat_floor", m_pimpl->m_flatFloor))
-//     {
-//         std::cerr << printPrefix <<
-//         "The parameter handler could not find \" flat_floor \" in the configuration file. Setting to false."
-//         << std::endl;
-//         m_pimpl->m_flatFloor = false;
-//     }
-
     return true;
 }
 
+iDynTree::FrameIndex LeggedOdometry::Impl::getLatestContact(const std::unordered_map<int, BipedalLocomotion::Contacts::EstimatedContact>& contacts)
+{
+    std::string_view printPrefix = "[LeggedOdometry::Impl::getLatestContact] ";
+    if (contacts.size() < 1)
+    {
+        std::cerr << printPrefix << "No contact data available." << std::endl;
+        return iDynTree::FRAME_INVALID_INDEX;
+    }
+    
+    bool atleastOneActiveContact{false};
+    int latestContactIdx;
+    double latestTime{-1.0}; // assuming time cannot be negative
+    for (auto& [idx, contact] : contacts)
+    {
+        if (contact.isActive)
+        {
+            atleastOneActiveContact = true;
+            if (contact.switchTime > latestTime)
+            {
+                latestContactIdx = idx;
+                latestTime = contact.switchTime;                
+            }
+        }
+    }
+    
+    if (!atleastOneActiveContact)
+    {
+        std::cerr << printPrefix << "No active contacts." << std::endl;
+        return iDynTree::FRAME_INVALID_INDEX;
+    }
+    
+    return contacts.at(latestContactIdx).index;
+}
 
 
 bool LeggedOdometry::resetEstimator()
 {
+    m_pimpl->resetInternal(m_modelComp);
+    m_pimpl->updateInternalState(m_modelComp, m_state);
     return true;
-}
-
-void LeggedOdometry::Impl::updateInternalState()
-{
-//            manif::SE3d fixedFrame_H_base = toManifPose(modelComputations().kinDyn().
-//                                                     getRelativeTransform(m_pimpl->initialFixedFrameIdx,
-//                                                                          modelComputations().baseLinkIdx()));
 }
 
 bool LeggedOdometry::resetEstimator(const FloatingBaseEstimators::InternalState& newState)
 {
+    manif::SE3d world_H_imu = manif::SE3d(newState.imuPosition, newState.imuOrientation);
+    manif::SE3d refFrame_H_imu  = toManifPose(modelComputations().kinDyn().
+                                              getRelativeTransform(m_pimpl->m_initialRefFrameForWorldIdx,
+                                                                   m_modelComp.baseIMUIdx()));
+    m_pimpl->m_refFrame_H_world = refFrame_H_imu*(world_H_imu.inverse());
+    
+    m_state = newState;
+    m_statePrev = newState;
+    m_pimpl->resetInternal(m_modelComp);
     return true;
 }
 
+bool LeggedOdometry::resetEstimator(const std::string refFrameForWorld, 
+                                    const Eigen::Quaterniond& worldOrientationInRefFrame, 
+                                    const Eigen::Vector3d& worldPositionInRefFrame)
+{
+    std::string_view printPrefix = "[LeggedOdometry::resetEstimator] ";
+    auto refFrameIdx = m_modelComp.kinDyn().model().getFrameIndex(refFrameForWorld);
+    if (refFrameIdx == iDynTree::FRAME_INVALID_INDEX)
+    {
+        std::cerr << printPrefix << "Frame unavailable in the loaded URDF model." << std::endl;
+        return false;
+        
+    }
+    m_pimpl->m_refFrame_H_world = manif::SE3d(worldPositionInRefFrame, worldOrientationInRefFrame);
+    m_pimpl->m_initialRefFrameForWorldIdx = refFrameIdx;    
+    resetEstimator();
+    
+    return true;
+}
+
+void LeggedOdometry::Impl::resetInternal(FloatingBaseEstimator::ModelComputations& modelComp)
+{
+    m_currentFixedFrameIdx = m_initialFixedFrameIdx;
+
+    manif::SE3d refFrame_H_fixedFrame  = toManifPose(modelComp.kinDyn().
+                                                     getRelativeTransform(m_initialRefFrameForWorldIdx,
+                                                                          m_initialFixedFrameIdx));
+
+    m_world_H_fixedFrame = m_refFrame_H_world.inverse()*refFrame_H_fixedFrame;
+
+    m_prevFixedFrameIdx = m_currentFixedFrameIdx;
+    m_odometryInitialized = true;
+}
+
+
+void LeggedOdometry::Impl::updateInternalState(FloatingBaseEstimator::ModelComputations& modelComp,
+                                               FloatingBaseEstimators::InternalState& state)
+{
+    manif::SE3d fixedFrame_H_imu = toManifPose(modelComp.kinDyn().
+                                               getRelativeTransform(m_currentFixedFrameIdx,
+                                                                    modelComp.baseIMUIdx()));
+    manif::SE3d world_H_imu = m_world_H_fixedFrame*fixedFrame_H_imu;
+    state.imuOrientation = world_H_imu.quat();
+    state.imuPosition = world_H_imu.translation();
+    
+    for (auto& [idx, contact] : state.supportFrameData)
+    {
+        manif::SE3d world_H_contact;
+        if (idx == m_currentFixedFrameIdx)
+        {
+            contact.pose = m_world_H_fixedFrame;
+        }
+        else
+        {
+            manif::SE3d fixedFrame_H_contact = toManifPose(modelComp.kinDyn().
+                                                       getRelativeTransform(m_currentFixedFrameIdx, idx));
+            contact.pose = m_world_H_fixedFrame*fixedFrame_H_contact;
+        }        
+    }
+}
 
 bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements& meas,
-                                      const double& dt)
+                                      const double& /*dt*/)
 {
     const std::string_view printPrefix = "[LeggedOdometry::updateKinematics] ";
-    if ( (meas.encoders.size() != modelComputations().nrJoints()) ||
-        (meas.encodersSpeed.size() != modelComputations().nrJoints()))
+    if ( (meas.encoders.size() != m_modelComp.nrJoints()) ||
+         (meas.encodersSpeed.size() != m_modelComp.nrJoints()))
     {
         std::cerr << printPrefix << "Kinematic measurements size mismatch. Please call setKinematics() before calling advance()."
         << std::endl;
         return false;
     }
 
-    if (!modelComputations().kinDyn().setJointPos(iDynTree::make_span(meas.encoders.data(), meas.encoders.size())))
+    if (!m_modelComp.kinDyn().setJointPos(iDynTree::make_span(meas.encoders.data(), meas.encoders.size())))
     {
         std::cerr << printPrefix << "Unable to set joint positions."
         << std::endl;
@@ -184,23 +273,31 @@ bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements
 
     if (!m_pimpl->m_odometryInitialized)
     {
-        m_pimpl->m_currentFixedFrameIdx = m_pimpl->m_initialFixedFrameIdx;
-
-        manif::SE3d refFrame_H_fixedFrame  = toManifPose(modelComputations().kinDyn().
-                                                         getRelativeTransform(m_pimpl->m_initialRefFrameForWorldIdx,
-                                                                              m_pimpl->m_initialFixedFrameIdx));
-
-        m_pimpl->m_world_H_fixedFrame = m_pimpl->m_refFrame_H_world.inverse()*refFrame_H_fixedFrame;
-
-        m_pimpl->m_prevFixedFrameIdx = m_pimpl->m_currentFixedFrameIdx;
-        m_pimpl->m_odometryInitialized = true;
+        m_pimpl->resetInternal(m_modelComp);
         return true;
     }
 
     // change fixed frame depending on switch times
-    // remove contacts if outdated
-    // update states
-
+    auto newIdx = m_pimpl->getLatestContact(m_state.supportFrameData);
+    if (newIdx == iDynTree::FRAME_INVALID_INDEX)
+    {
+        std::cerr << printPrefix << "The assumption of atleast one active contact is broken. This may lead ot unexpected results." << std::endl;
+        return false;        
+    }
+    
+    if (newIdx != m_pimpl->m_prevFixedFrameIdx)
+    {
+        if (!m_pimpl->changeFixedFrame(newIdx, m_modelComp.kinDyn()))
+        {
+            std::cerr << printPrefix << "Unable to change new fixed frame." << std::endl;
+            return false;
+        }
+    }
+    
+    // TODO{@prashanthr05} remove contacts if outdated
+    
+    // update internal states
+    m_pimpl->updateInternalState(m_modelComp, m_state);
     return true;
 }
 
