@@ -76,8 +76,11 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
         << std::endl;
         return false;
     }
-
-    if (!handle->getParameter("initial_fixed_frame", m_pimpl->m_initialFixedFrame))
+    
+    auto loHandler = handle->getGroup("LeggedOdom");
+    auto lohandle = loHandler.lock();
+    
+    if (!lohandle->getParameter("initial_fixed_frame", m_pimpl->m_initialFixedFrame))
     {
         std::cerr <<  printPrefix <<
         "The parameter handler could not find \" initial_fixed_frame \" in the configuration file."
@@ -97,7 +100,7 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
 
     std::vector<double> initialWorldOrientationInRefFrame{1., 0., 0., 0.};
     std::vector<double> initialWorldPositionInRefFrame{0., 0., 0.};
-    if (!handle->getParameter("initial_ref_frame_for_world", m_dt))
+    if (!lohandle->getParameter("initial_ref_frame_for_world", m_pimpl->m_initialRefFrameForWorld))
     {
         std::cerr << printPrefix <<
         "The parameter handler could not find \"initial_ref_frame_for_world \" in the configuration file. Setting \"initial_fixed_frame\" as reference frame for world"
@@ -115,12 +118,12 @@ bool LeggedOdometry::customInitialization(std::weak_ptr<BipedalLocomotion::Param
         }
 
         // setup initial states
-        if (!handle->getParameter("initial_world_orientation_in_ref_frame", GenericContainer::make_vector(initialWorldOrientationInRefFrame, GenericContainer::VectorResizeMode::Fixed)))
+        if (!lohandle->getParameter("initial_world_orientation_in_ref_frame", GenericContainer::make_vector(initialWorldOrientationInRefFrame, GenericContainer::VectorResizeMode::Fixed)))
         {
             std::cerr <<  printPrefix << "The parameter handler could not find \"initial_world_orientation_in_ref_frame\" in the configuration file. Setting to identity" << std::endl;
         }
 
-        if (!handle->getParameter("initial_world_position_in_ref_frame", GenericContainer::make_vector(initialWorldPositionInRefFrame, GenericContainer::VectorResizeMode::Fixed)))
+        if (!lohandle->getParameter("initial_world_position_in_ref_frame", GenericContainer::make_vector(initialWorldPositionInRefFrame, GenericContainer::VectorResizeMode::Fixed)))
         {
             std::cerr << printPrefix << "The parameter handler could not find \"initial_world_position_in_ref_frame\" in the configuration file. Setting to zero." << std::endl;
         }

@@ -300,7 +300,7 @@ bool FloatingBaseEstimator::setContacts(const bool& lfInContact,
     return true;
 }
 
-bool FloatingBaseEstimator::setTimeContactPairs(const std::unordered_map<int, std::pair<bool, double> >& timedContacts, const double& time_now)
+bool FloatingBaseEstimator::setTimeContactPairs(const std::unordered_map<std::string, std::pair<bool, double> >& timedContacts, const double& time_now)
 {
     for (const auto& [idx, pair] : timedContacts )
     {
@@ -313,9 +313,10 @@ bool FloatingBaseEstimator::setTimeContactPairs(const std::unordered_map<int, st
     return true;
 }
 
-bool FloatingBaseEstimator::setTimeContactPair(const int& idx, const std::pair<bool, double>& timedContact, const double& time_now)
+bool FloatingBaseEstimator::setTimeContactPair(const std::string& name, const std::pair<bool, double>& timedContact, const double& time_now)
 {
     auto& contactStates = m_state.supportFrameData;
+    auto idx = m_modelComp.kinDyn().model().getFrameIndex(name);
     if (!m_modelComp.kinDyn().model().isValidFrameIndex(idx))
     {
         std::cerr << "[FloatingBaseEstimator::setTimeContactPair] Contact frame index: " << idx

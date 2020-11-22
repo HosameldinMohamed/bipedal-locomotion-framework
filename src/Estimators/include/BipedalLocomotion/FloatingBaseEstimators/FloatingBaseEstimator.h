@@ -179,11 +179,11 @@ public:
     /**
     * set contact measurements and timing,
     * This updates the fields if contact already exists , otherwise adds a new contact to contact state container
-    * @param[in] idx contact frame index
+    * @param[in] name contact frame name
     * @param[in] timedContact (contact state, switching time) measurement pair
     * @param[in] time_now  time of measurement update
     */
-    bool setTimeContactPair(const int& idx, const std::pair<bool, double> & timedContact, const double& time_now);
+    bool setTimeContactPair(const std::string& name, const std::pair<bool, double> & timedContact, const double& time_now);
 
     /**
     * set contact measurements and timing,
@@ -191,7 +191,7 @@ public:
     * @param[in] timedContacts a container of (contact state, switching time)  measurement pairs
     * @param[in] time_now  time of measurement update
     */
-    bool setTimeContactPairs(const std::unordered_map<int, std::pair<bool, double> >& timedContacts, const double& time_now);
+    bool setTimeContactPairs(const std::unordered_map<std::string, std::pair<bool, double> >& timedContacts, const double& time_now);
 
     /**
     * Set kinematic measurements
