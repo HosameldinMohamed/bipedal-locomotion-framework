@@ -154,7 +154,7 @@ iDynTree::FrameIndex LeggedOdometry::Impl::getLatestContact(const std::unordered
     for (auto& [idx, contact] : contacts)
     {
         if (contact.isActive)
-        {
+        {            
             atleastOneActiveContact = true;
             if (contact.switchTime > latestTime)
             {
@@ -163,13 +163,13 @@ iDynTree::FrameIndex LeggedOdometry::Impl::getLatestContact(const std::unordered
             }
         }
     }
-    
+        
     if (!atleastOneActiveContact)
     {
         std::cerr << printPrefix << "No active contacts." << std::endl;
         return iDynTree::FRAME_INVALID_INDEX;
     }
-    
+            
     return contacts.at(latestContactIdx).index;
 }
 
@@ -181,16 +181,20 @@ bool LeggedOdometry::resetEstimator()
     return true;
 }
 
-bool LeggedOdometry::resetEstimator(const FloatingBaseEstimators::InternalState& newState)
-{
-    manif::SE3d world_H_imu = manif::SE3d(newState.imuPosition, newState.imuOrientation);
+bool LeggedOdometry::resetEstimator(const Eigen::Quaterniond& newIMUOrientation, 
+                                    const Eigen::Vector3d& newIMUPosition)
+{    
+    manif::SE3d world_H_imu = manif::SE3d(newIMUPosition, newIMUOrientation);
     manif::SE3d refFrame_H_imu  = toManifPose(modelComputations().kinDyn().
                                               getRelativeTransform(m_pimpl->m_initialRefFrameForWorldIdx,
                                                                    m_modelComp.baseIMUIdx()));
     m_pimpl->m_refFrame_H_world = refFrame_H_imu*(world_H_imu.inverse());
     
-    m_state = newState;
-    m_statePrev = newState;
+    m_state.imuOrientation = newIMUOrientation;
+    m_state.imuPosition = newIMUPosition;
+    
+    m_statePrev = m_state;
+    
     m_pimpl->resetInternal(m_modelComp);
     return true;
 }
@@ -238,7 +242,7 @@ void LeggedOdometry::Impl::updateInternalState(FloatingBaseEstimator::ModelCompu
     manif::SE3d world_H_imu = m_world_H_fixedFrame*fixedFrame_H_imu;
     state.imuOrientation = world_H_imu.quat();
     state.imuPosition = world_H_imu.translation();
-    
+
     for (auto& [idx, contact] : state.supportFrameData)
     {
         manif::SE3d world_H_contact;
@@ -251,7 +255,20 @@ void LeggedOdometry::Impl::updateInternalState(FloatingBaseEstimator::ModelCompu
             manif::SE3d fixedFrame_H_contact = toManifPose(modelComp.kinDyn().
                                                        getRelativeTransform(m_currentFixedFrameIdx, idx));
             contact.pose = m_world_H_fixedFrame*fixedFrame_H_contact;
-        }        
+        }
+        
+        // TODO{@prashanthr05} deprecate and remove the following in future versions
+        if (contact.name == modelComp.leftFootContactFrame())
+        {
+            state.lContactFrameOrientation = contact.pose.quat();
+            state.lContactFramePosition = contact.pose.translation();
+        }
+        
+        if (contact.name == modelComp.rightFootContactFrame())
+        {
+            state.rContactFrameOrientation = contact.pose.quat();
+            state.rContactFramePosition = contact.pose.translation();
+        }
     }
 }
 
@@ -274,12 +291,14 @@ bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements
         return false;
     }
 
+    // initialization step
     if (!m_pimpl->m_odometryInitialized)
     {
         m_pimpl->resetInternal(m_modelComp);
         return true;
     }
 
+    // run step
     // change fixed frame depending on switch times
     auto newIdx = m_pimpl->getLatestContact(m_state.supportFrameData);
     if (newIdx == iDynTree::FRAME_INVALID_INDEX)
@@ -288,13 +307,13 @@ bool LeggedOdometry::updateKinematics(const FloatingBaseEstimators::Measurements
         return false;        
     }
     
-    if (newIdx != m_pimpl->m_prevFixedFrameIdx)
+    if (newIdx != m_pimpl->m_currentFixedFrameIdx)
     {
         if (!m_pimpl->changeFixedFrame(newIdx, m_modelComp.kinDyn()))
         {
             std::cerr << printPrefix << "Unable to change new fixed frame." << std::endl;
             return false;
-        }
+        }        
     }
     
     // TODO{@prashanthr05} remove contacts if outdated
@@ -317,10 +336,11 @@ bool LeggedOdometry::Impl::changeFixedFrame(const iDynTree::FrameIndex& newIdx,
     }
 
     manif::SE3d oldFixed_H_newFixed  = toManifPose(kinDyn.getRelativeTransform(m_currentFixedFrameIdx, newIdx));
-    m_world_H_fixedFrame = m_world_H_fixedFrame*oldFixed_H_newFixed;
+    m_world_H_fixedFrame = (m_world_H_fixedFrame*oldFixed_H_newFixed);
     m_prevFixedFrameIdx = m_currentFixedFrameIdx;
     m_currentFixedFrameIdx = newIdx;
-
+    
+    std::cout << printPrefix << "Fixed frame changed to " << kinDyn.model().getFrameName(m_currentFixedFrameIdx) << "." << std::endl;    
     return true;
 }
 

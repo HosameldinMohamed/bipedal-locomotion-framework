@@ -109,7 +109,7 @@ bool SchmittTriggerDetector::customInitialization(std::weak_ptr<IParametersHandl
         params.switchOnAfter = switchOnAfter[idx];
         params.switchOffAfter = switchOffAfter[idx];
 
-        if (!addContact(contacts[idx], false, params))
+        if (!addContact(name, false, params))
         {
             std::cerr << printPrefix << "Could not add Schmitt Trigger unit for specified contact." << std::endl;
             return false;
@@ -247,6 +247,22 @@ bool SchmittTriggerDetector::resetContact(const std::string& contactName,
     return true;
 }
 
+bool SchmittTriggerDetector::resetState(const std::string& contactName, const bool& state)
+{
+    std::string_view printPrefix = "[SchmittTriggerDetector::resetContact] ";
+    if (!m_pimpl->contactExists(contactName))
+    {
+        std::cerr << printPrefix << "Contact does not exist." << std::endl;
+        return false;
+    }
+    
+    m_pimpl->manager.at(contactName).second.setState(state);
+    m_contactStates.at(contactName).isActive = state;
+    m_contactStates.at(contactName).switchTime = 0.0;
+    
+    return true;
+}
+
 
 bool SchmittTriggerDetector::Impl::contactExists(const std::string& contactName)
 {
@@ -318,8 +334,7 @@ void SchmittTriggerUnit::update(const double& currentTime, const double& rawValu
             (timer >= params.switchOnAfter) ?  state = true : timer += (currentTime - previousTime);
             if (state)
             {
-                switchTime = currentTime;
-                std::cout << "Switch time: " << switchTime << std::endl;
+                switchTime = currentTime;                
                 timer = 0;
             }
         }
@@ -336,8 +351,7 @@ void SchmittTriggerUnit::update(const double& currentTime, const double& rawValu
             (timer >= params.switchOffAfter) ? state = false : timer += (currentTime - previousTime);
             if (!state)
             {
-                switchTime = currentTime;
-                std::cout << "Switch time: " << switchTime << std::endl;
+                switchTime = currentTime;                
                 timer = 0;
             }
         }

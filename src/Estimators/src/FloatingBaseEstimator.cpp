@@ -334,6 +334,8 @@ bool FloatingBaseEstimator::setTimeContactPair(const std::string& name, const st
         BipedalLocomotion::Contacts::EstimatedContact newContact;
         newContact.setTimedContact(timedContact);
         newContact.lastUpdateTime = time_now;
+        newContact.name = name;
+        newContact.index = idx;        
         contactStates[idx] = newContact;
     }
     return true;

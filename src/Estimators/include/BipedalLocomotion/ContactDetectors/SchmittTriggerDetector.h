@@ -75,6 +75,15 @@ public:
                     const bool& initialState,
                     const SchmittTriggerParams& params,
                     const double& time_now);
+    
+    /**
+     * Reset a contact's state
+     * @param[in] contactName name of the contact
+     * @param[in] initialState contact state
+     * @return True in case of success, false if contact does not exist/otherwise.
+     */
+    bool resetState(const std::string& contactName,
+                    const bool& state);
 
     /**
      * Reset a contact's parameters

@@ -34,12 +34,14 @@ public:
 
     /**
      * Reset the internal state of the estimator
-     * @param[in] newState Internal state of the estimator
+     * @param[in] newIMUOrientation  IMU orientation of the estimator
+     * @param[in] newIMUPosition  IMU position of the estimator
      * @return True in case of success, false otherwise.
      *
      * @note reset and advance estimator to get updated estimator output
      */
-    virtual bool resetEstimator(const FloatingBaseEstimators::InternalState& newState) override;
+    virtual bool resetEstimator(const Eigen::Quaterniond& newIMUOrientation, 
+                                const Eigen::Vector3d& newIMUPosition) override;
 
     bool resetEstimator();
 
