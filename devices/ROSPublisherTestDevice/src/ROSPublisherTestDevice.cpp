@@ -45,20 +45,15 @@ void BipedalLocomotion::ROSPublisherTestDevice::run()
 {
    std::vector<std::string> jointList{"hello"};
    std::vector<double> jointPos{20.0};
-
-   auto jointPosGen = GenericContainer::make_vector(jointPos, GenericContainer::VectorResizeMode::Resizable); 
-   auto jointListGen = GenericContainer::make_vector(jointList, GenericContainer::VectorResizeMode::Resizable);
    
-   pub->publishJointStates(jointListGen, jointPosGen);
+   pub->publishJointStates(jointList, jointPos);
    
    std::vector<double> wrench{0.0, 1.0, 2.0,0.0, 0.0, 0.0};
-   auto wrenchGen = GenericContainer::make_vector(wrench, GenericContainer::VectorResizeMode::Fixed);
-   pub->publishWrench("right", wrenchGen);
+   pub->publishWrench("right", wrench);
    
    
    std::vector<double> pose{1., 0, 0, 0, 0, 1., 0, 0, 0, 0, 1., 0, 0, 0, 0, 1.};
-   auto poseGen = GenericContainer::make_vector(pose, GenericContainer::VectorResizeMode::Fixed);
-   pub->publishTransform("/world", "/dummy", poseGen);
+   pub->publishTransform("/world", "/dummy", pose);
 }
 
 
