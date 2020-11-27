@@ -3,4 +3,5 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 add_subdirectory(FloatingBaseEstimatorDevice)
+add_subdirectory(ROSPublisherTestDevice)
 
