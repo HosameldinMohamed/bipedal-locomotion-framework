@@ -12,4 +12,5 @@ add_subdirectory(Planners)
 add_subdirectory(ContactModels)
 add_subdirectory(AutoDiff)
 add_subdirectory(RobotInterface)
+add_subdirectory(Perception)
 
