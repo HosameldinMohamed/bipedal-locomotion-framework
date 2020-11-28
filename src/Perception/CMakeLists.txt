@@ -8,7 +8,7 @@ if(FRAMEWORK_COMPILE_Perception)
     NAME                   PerceptionFeatures
     SOURCES                src/ArucoDetector.cpp
     PUBLIC_HEADERS         ${H_PREFIX}/ArucoDetector.h
-#    SUBDIRECTORIES         tests/Perception/Features
+    SUBDIRECTORIES         tests/Perception/Features
     PUBLIC_LINK_LIBRARIES  BipedalLocomotion::ParametersHandler BipedalLocomotion::GenericContainer BipedalLocomotion::CommonConversions ${OpenCV_LIBS})
 endif()
 
