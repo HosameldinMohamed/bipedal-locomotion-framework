@@ -258,11 +258,11 @@ bool ArucoDetector::getImgWithDetectedMarkers(cv::Mat& outputImg,
                                               const double& axisLengthForDrawing)
 {
     std::size_t nrDetectedMarkers = m_pimpl->currentDetectedMarkerIds.size();
-    if (m_pimpl->currentImg.empty() ||  nrDetectedMarkers > 0)
+    if (m_pimpl->currentImg.empty() ||  nrDetectedMarkers <= 0)
     {
         return false;
     }
-    
+
     m_pimpl->currentImg.copyTo(outputImg);
     cv::aruco::drawDetectedMarkers(outputImg, 
                                    m_pimpl->currentDetectedMarkerCorners, 

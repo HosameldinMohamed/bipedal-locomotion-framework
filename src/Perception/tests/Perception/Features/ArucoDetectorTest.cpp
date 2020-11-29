@@ -7,10 +7,12 @@
 
 // Catch2
 #include <catch2/catch.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <BipedalLocomotion/Perception/Features/ArucoDetector.h>
 #include <BipedalLocomotion/ParametersHandler/IParametersHandler.h>
 #include <BipedalLocomotion/ParametersHandler/StdImplementation.h>
+#include <ResourceFolderPath.h>
 
 using namespace BipedalLocomotion::Perception;
 using namespace BipedalLocomotion::ParametersHandler;
@@ -27,5 +29,22 @@ TEST_CASE("Aruco Detector")
     ArucoDetector detector;
     REQUIRE(detector.initialize(parameterHandler));
     
+    auto imgName = getSampleImagePath();
+    auto inputImg = cv::imread(imgName);
+        
+    REQUIRE(detector.setImage(inputImg, 0.1));
+    REQUIRE(detector.advance());
     
+    cv::Mat outputImage;
+    REQUIRE(detector.getImgWithDetectedMarkers(outputImage, /*drawFrames=*/ true, /*axisLengthForDrawing=*/ 0.3));
+    
+    // Marker 2 is detected in the sample image
+    ArucoMarkerData marker2;
+    REQUIRE(detector.getDetectedMarkerData(/*id=*/ 2, marker2));
+    REQUIRE(marker2.id == 2);
+    
+    /* // uncomment this block to view the output image
+       cv::imshow("outputImage", outputImage);
+       cv::waitKey();
+    */
 }
