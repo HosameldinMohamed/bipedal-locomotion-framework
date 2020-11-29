@@ -69,7 +69,7 @@ public:
 }; 
 
 ArucoDetector::ArucoDetector() : 
-               m_pimpl(std::make_unique<ArucoDetector::Impl>())
+               m_pimpl(std::make_unique<Impl>())
 {
 }
 

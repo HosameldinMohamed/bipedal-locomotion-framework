@@ -131,7 +131,7 @@ public:
     
 private:
     class Impl;
-    std::unique_ptr<Impl> m_pimpl{nullptr};
+    std::unique_ptr<Impl> m_pimpl;
 };
 
 } // namespace Perception
