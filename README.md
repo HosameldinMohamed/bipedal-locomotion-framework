@@ -24,6 +24,7 @@ The **BipedalLocomotionFramework** project is a _suite_ of libraries for achievi
 - [**BipedalLocomotion::FloatingBaseEstimators**](./src/Estimators): Library containing floating base estimators
 - [**BipedalLocomotion::Planner**](./src/Planner): Library containing planner useful for locomotion
 - [**BipedalLocomotion::RobotInterface**](./src/RobotInterface): Library containing generic interface classes to adapt to various IO data formats
+- [**BipedalLocomotion::Perception**](./src/Perception): Library containing perception algorithms necessary for locomotion
 
 
 # :page_facing_up: Dependencies
@@ -74,6 +75,14 @@ file. Please note that the indicated version is the the minimum required version
 - `RobotInterface` requires:
     - For using it:
       - [`ParametersHandler`](./src/ParametersHandler)
+    - For testing:
+      - [`Catch2`](https://github.com/catchorg/Catch2)
+- `PerceptionFeatures` requires:
+    - For using it:
+      - [`ParametersHandler`](./src/ParametersHandler)
+      - [`GenericContainer`](./src/GenericContainer)
+      - [`CommonConversions`](./src/Conversions)
+      - [`OpenCV`](https://github.com/opencv/opencv) 
     - For testing:
       - [`Catch2`](https://github.com/catchorg/Catch2)
 
