@@ -48,19 +48,6 @@ bool FloatingBaseEstimatorDevice::open(yarp::os::Searchable& config)
         setPeriod(devicePeriod);
     }
 
-    if (!YarpUtilities::getElementFromSearchable(config, "publish_rostf", m_publishROSTF))
-    {
-        m_publishROSTF = false;
-    }
-
-    if (m_publishROSTF)
-    {
-        if (!loadTransformBroadcaster())
-        {
-            return false;
-        }
-    }
-
     if (!setupRobotModel(config))
     {
         return false;
@@ -430,16 +417,6 @@ void FloatingBaseEstimatorDevice::publishBaseLinkState(const FloatingBaseEstimat
     }
 
     m_comms.floatingBaseStatePort.write();
-
-    yarp::sig::Matrix basePoseYARP;
-    iDynTree::toYarp(estimatorOut.basePose, basePoseYARP);
-    if (m_publishROSTF && m_transformInterface != nullptr)
-    {
-        if (!m_transformInterface->setTransform("/world", "/base_link", basePoseYARP))
-        {
-            yError() << "[FloatingBaseEstimatorDevice] Could not publish measured base pose transform from  primary IMU";
-        }
-    }
 }
 
 void FloatingBaseEstimatorDevice::publishInternalStateAndStdDev(const FloatingBaseEstimators::Output& estimatorOut)

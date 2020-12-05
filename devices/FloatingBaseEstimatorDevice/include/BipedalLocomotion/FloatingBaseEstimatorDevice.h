@@ -66,7 +66,6 @@ private:
                              const std::string& portPrefix,
                              const std::string& address);
     void closeBufferedSigPort(yarp::os::BufferedPort<yarp::sig::Vector>& port);
-    bool loadTransformBroadcaster();
 
     struct
     {
