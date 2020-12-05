@@ -259,6 +259,12 @@ bool ArucoDetector::getImgWithDetectedMarkers(cv::Mat& outputImg,
     }
 
     m_pimpl->currentImg.copyTo(outputImg);
+    
+    if (outputImg.empty())
+    {
+    	return false;
+    }
+    
     cv::aruco::drawDetectedMarkers(outputImg, 
                                    m_pimpl->currentDetectedMarkerCorners, 
                                    m_pimpl->currentDetectedMarkerIds);
