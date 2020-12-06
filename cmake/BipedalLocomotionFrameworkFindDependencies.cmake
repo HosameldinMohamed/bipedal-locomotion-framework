@@ -162,6 +162,9 @@ checkandset_dependency(pytest)
 find_package(matioCpp QUIET)
 checkandset_dependency(matioCpp)
 
+find_package(OpenCV QUIET)
+checkandset_dependency(OpenCV)
+
 framework_dependent_option(FRAMEWORK_COMPILE_YarpUtilities
   "Compile YarpHelper library?" ON
   "FRAMEWORK_USE_YARP" OFF)
@@ -208,7 +211,7 @@ framework_dependent_option(FRAMEWORK_COMPILE_ManifConversions
 
 framework_dependent_option(FRAMEWORK_COMPILE_matioCppConversions
   "Compile matioCpp Conversions libraries?" ON
-  "FRAMEWORK_USE_matioCpp" OFF)
+  "FRAMEWORK_USE_matioCpp" OFF)  
 
 framework_dependent_option(FRAMEWORK_COMPILE_JointPositionTrackingApplication
   "Compile joint-position-tracking application?" ON
@@ -221,3 +224,7 @@ framework_dependent_option(FRAMEWORK_COMPILE_PYTHON_BINDINGS
 framework_dependent_option(FRAMEWORK_TEST_PYTHON_BINDINGS
   "Do you want to test the Python bindings?" ON
   "FRAMEWORK_COMPILE_tests;FRAMEWORK_COMPILE_PYTHON_BINDINGS;FRAMEWORK_USE_pytest" OFF)
+  
+framework_dependent_option(FRAMEWORK_COMPILE_Perception
+  "Compile Perception libraries?" ON
+  "FRAMEWORK_USE_OpenCV" OFF)
