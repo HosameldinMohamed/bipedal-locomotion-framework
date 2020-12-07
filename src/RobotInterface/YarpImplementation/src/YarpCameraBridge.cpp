@@ -31,19 +31,21 @@ using namespace BipedalLocomotion::ParametersHandler;
 struct YarpCameraBridge::Impl
 {
     template <typename PixelCode>
-    using StampedYARPImage = std::pair<yarp::sig::ImageOf<PixelCode>, double>;
+    using StampedYARPImage = std::pair< yarp::sig::ImageOf<PixelCode>, double>;
+    
+    using StampedYARPFlexImage = std::pair<yarp::sig::FlexImage, double>;
     
     std::unordered_map<std::string, yarp::dev::IFrameGrabberImage*> wholeBodyFrameGrabberInterface; /** < map of cameras attached through frame grabber interfaces */
     std::unordered_map<std::string, yarp::dev::IRGBDSensor*> wholeBodyRGBDInterface; /** < map of cameras attached through RGBD interfaces */
-    std::unordered_map<std::string, StampedYARPImage<yarp::sig::PixelRgb> > wholeBodyCameraRGBImages; /** < map holding images **/
-    std::unordered_map<std::string, StampedYARPImage<yarp::sig::PixelFloat> > wholeBodyCameraDepthImages; /** < map holding images **/
+
     
-    std::vector<std::string> failedSensorReads;
     CameraBridgeMetaData metaData; /**< struct holding meta data **/
     bool bridgeInitialized{false}; /**< flag set to true if the bridge is successfully initialized */
     bool driversAttached{false}; /**< flag set to true if the bridge is successfully attached to required device drivers */
-    bool checkForNAN{false}; /**< flag to enable binary search for NANs in the incoming measurement buffers */
-
+    
+    StampedYARPImage<yarp::sig::PixelFloat> depthImage;
+    StampedYARPFlexImage flexImage;
+    StampedYARPImage<yarp::sig::PixelRgb> rgbImage;
     
     /**
      * Check if sensor is available in the relevant sensor map
@@ -274,20 +276,9 @@ struct YarpCameraBridge::Impl
             std::string_view interfaceType{"RGB Cameras"};
             if (!attachAllCamerasOfSpecificType(devList,
                                                 metaData.sensorsList.rgbCamerasList,
-                                                metaData.bridgeOptions.rgbImgDimensions,
                                                 interfaceType,
                                                 wholeBodyFrameGrabberInterface))
             {
-                return false;
-            }
-            std::string imgType{"RGB"};
-            // allocate rgb images of rgb cameras
-            if (!resizeImageBuffers(imgType, 
-                                    metaData.sensorsList.rgbCamerasList,
-                                    metaData.bridgeOptions.rgbImgDimensions,
-                                    wholeBodyCameraRGBImages))
-            {
-                std::cout << printPrefix << " Failed to allocate Depth images of type RGB camera type." << std::endl;
                 return false;
             }
         }
@@ -297,32 +288,9 @@ struct YarpCameraBridge::Impl
             std::string_view interfaceTypeDepth{"RGBD Cameras"};
             if (!attachAllCamerasOfSpecificType(devList,
                                                 metaData.sensorsList.rgbdCamerasList,
-                                                metaData.bridgeOptions.rgbdImgDimensions,
                                                 interfaceTypeDepth,
                                                 wholeBodyRGBDInterface))
             {
-                return false;
-            }
-            
-            // allocate depth images of rgbd cameras
-            std::string imgType{"DEPTH"};
-            if (!resizeImageBuffers(imgType,
-                                    metaData.sensorsList.rgbdCamerasList,
-                                    metaData.bridgeOptions.rgbdImgDimensions,
-                                    wholeBodyCameraDepthImages))
-            {
-                std::cout << printPrefix << " Failed to allocate Depth images of type RGBD camera type." << std::endl;
-                return false;
-            }
-            
-            // resize also rgb images of RGBD cameras
-            imgType = "RGB";
-            if (!resizeImageBuffers(imgType,
-                                    metaData.sensorsList.rgbdCamerasList,
-                                    metaData.bridgeOptions.rgbdImgDimensions,
-                                    wholeBodyCameraRGBImages))
-            {
-                std::cout << printPrefix << " Failed to allocate RGB images of type RGBD camera type." << std::endl;
                 return false;
             }
         }
@@ -336,7 +304,6 @@ struct YarpCameraBridge::Impl
     template <typename CameraType>
     bool attachAllCamerasOfSpecificType(const yarp::dev::PolyDriverList& devList,
                                         const std::vector<std::string>& camList,
-                                        const std::unordered_map<std::string, std::pair<std::size_t, std::size_t> >& imgDimensionsMap,
                                         std::string_view interfaceType,
                                         std::unordered_map<std::string, CameraType* >& sensorMap)
     {
@@ -359,34 +326,52 @@ struct YarpCameraBridge::Impl
     }
 
     /**
-     * Resize image buffers
-     */
+     * Resize image buffers ImageOf<PixelType>
+     */    
     template <typename PixelType>
-    bool resizeImageBuffers(const std::string imgType,
-                            const std::vector<std::string>& camList,
-                            const std::unordered_map<std::string, std::pair<std::size_t, std::size_t> >& imgDimensionsMap,
-                            std::unordered_map<std::string, StampedYARPImage<PixelType> >& imgBuffersMap)
+    bool resizeImageBuffer(const std::string& cam,
+                           const std::unordered_map<std::string, std::pair<std::size_t, std::size_t> >& imgDimensionsMap,
+                           StampedYARPImage<PixelType>& img)
     {
-        for (const auto& cam : camList)
+        auto iter = imgDimensionsMap.find(cam);
+        if (iter == imgDimensionsMap.end())
         {
-            auto iter = imgDimensionsMap.find(cam);
-            if (iter == imgDimensionsMap.end())
-            {
-                return false;
-            }
-            auto imgDim = iter->second;
-
-            imgBuffersMap[cam].first.resize(imgDim.first, imgDim.second);
+            return false;
+        }
+        auto imgDim = iter->second;
+        if (img.first.width() != imgDim.first || img.first.height() != imgDim.second)
+        {
+            img.first.resize(imgDim.first, imgDim.second);        
         }
         return true;        
     }
-                        
+    
+    /**
+     * Resize image buffers - Flex Image
+     */   
+    bool resizeImageBuffer(const std::string& cam,
+                           const std::unordered_map<std::string, std::pair<std::size_t, std::size_t> >& imgDimensionsMap,
+                           StampedYARPFlexImage& img)
+    {
+        auto iter = imgDimensionsMap.find(cam);
+        if (iter == imgDimensionsMap.end())
+        {
+            return false;
+        }
+        auto imgDim = iter->second;
+        img.first.setPixelCode(VOCAB_PIXEL_RGB);
+        if (img.first.width() != imgDim.first || img.first.height() != imgDim.second)
+        {
+            img.first.resize(imgDim.first, imgDim.second);        
+        }
+        return true;        
+    }
 
+    
     template<typename CameraType, typename PixelType>
     bool readCameraImage(const std::string& cameraName,
-                         const std::string& imageType,
                          std::unordered_map<std::string, CameraType*>& interfaceMap,
-                         std::unordered_map<std::string, StampedYARPImage<PixelType> >& imageMap)
+                         StampedYARPImage<PixelType>& image)
     {
         bool ok{true};
         constexpr std::string_view logPrefix = "[YarpCameraBridge::Impl::readCameraImage] ";
@@ -408,20 +393,13 @@ struct YarpCameraBridge::Impl
                 std::cerr << logPrefix << " Frame Grabber " << cameraName << "handles only RGB image" << std::endl;
                 return false;
             }
-            ok = interface->getImage(imageMap.at(cameraName).first);
+            ok = interface->getImage(image.first);
         }
         else if constexpr (std::is_same_v<CameraType, yarp::dev::IRGBDSensor>)
         {
-            if constexpr (std::is_same_v<PixelType, yarp::sig::PixelRgb>)//(imageType == "RGB")
+            if constexpr (std::is_same_v<PixelType, yarp::sig::PixelFloat>)// (imageType == "DEPTH")
             {
-                // TO CHECK IMPLEMENTATION
-                yarp::sig::FlexImage img;  
-                img.setPixelCode(VOCAB_PIXEL_RGB);
-//                 ok = interface->getRgbImage(img, txTimestamp);
-            }
-            else if constexpr (std::is_same_v<PixelType, yarp::sig::PixelFloat>)// (imageType == "DEPTH")
-            {
-                ok = interface->getDepthImage(imageMap.at(cameraName).first, txTimestamp);
+                ok = interface->getDepthImage(image.first, txTimestamp);
             }
         }
 
@@ -431,93 +409,39 @@ struct YarpCameraBridge::Impl
             return false;
         }
 
-        imageMap.at(cameraName).second = yarp::os::Time::now();
+        image.second = yarp::os::Time::now();
         return true;
-    }
+    }       
     
-    bool readAllFrameGrabberCameras(std::vector<std::string>& failedSensorReads)
+    template<typename CameraType>
+    bool readCameraImage(const std::string& cameraName,
+                         std::unordered_map<std::string, CameraType*>& interfaceMap,
+                         StampedYARPFlexImage& img)
     {
-        if (!metaData.bridgeOptions.isRGBCameraEnabled)
+        bool ok{true};
+        constexpr std::string_view logPrefix = "[YarpCameraBridge::Impl::readCameraImage] ";
+
+        if (!checkSensor(interfaceMap, cameraName))
         {
-            // do nothing
-            return true;
+            return false;
         }
 
-        constexpr std::string_view logPrefix = "[YarpCameraBridge::Impl::readAllFrameGrabberCameras] ";
-        bool allRGBCamerasReadCorrectly{true};
-        failedSensorReads.clear();
-        for( auto const& camera : wholeBodyFrameGrabberInterface )
+        auto iter = interfaceMap.find(cameraName);
+        auto interface = iter->second;
+        
+        yarp::os::Stamp* txTimestamp{nullptr};
+        if constexpr (std::is_same_v<CameraType, yarp::dev::IRGBDSensor>)
         {
-            std::string imageType{"RGB"};
-            const auto& cameraName = camera.first;
-            bool ok = readCameraImage(cameraName,
-                                      imageType,
-                                      wholeBodyFrameGrabberInterface,
-                                      wholeBodyCameraRGBImages);
-            if (!ok)
-            {
-                std::cerr << logPrefix << " Read RGB image failed for " << cameraName << std::endl;
-                failedSensorReads.emplace_back(cameraName);
-            }
-            allRGBCamerasReadCorrectly = ok && allRGBCamerasReadCorrectly;
+            ok = interface->getRgbImage(img.first, txTimestamp);                     
         }
 
-        return allRGBCamerasReadCorrectly;
-    }
-
-    bool readAllRGBDCameras(std::vector<std::string>& failedSensorReads)
-    {
-        if (!metaData.bridgeOptions.isRGBDCameraEnabled)
+        if (!ok)
         {
-            // do nothing
-            return true;
+            std::cerr << logPrefix << " Unable to read from " << cameraName << ", use previous image" << std::endl;
+            return false;
         }
 
-        constexpr std::string_view logPrefix = "[YarpCameraBridge::Impl::readAllRGBDCameras] ";
-        bool allRGBDCamerasReadCorrectly{true};
-        failedSensorReads.clear();
-        for( auto const& camera : wholeBodyRGBDInterface )
-        {
-            std::string imageType{"RGB"};
-            bool ok{true};
-            const auto& cameraName = camera.first;
-            ok = readCameraImage(cameraName,
-                                 imageType,
-                                 wholeBodyRGBDInterface,
-                                 wholeBodyCameraRGBImages) && ok;
-
-            imageType = "DEPTH";
-            ok = readCameraImage(cameraName,
-                                 imageType,
-                                 wholeBodyRGBDInterface,
-                                 wholeBodyCameraDepthImages) && ok;
-
-            if (!ok)
-            {
-                std::cerr << logPrefix << " Read RGB/Depth image failed for " << cameraName << std::endl;
-                failedSensorReads.emplace_back(cameraName);
-            }
-
-            allRGBDCamerasReadCorrectly = ok && allRGBDCamerasReadCorrectly;
-        }
-
-        return allRGBDCamerasReadCorrectly;
-    }
-    
-    bool readAllSensors(std::vector<std::string>& failedReadAllSensors)
-    {
-        failedReadAllSensors.clear();
-        std::vector<std::string> failedReads;
-
-        if (!readAllRGBDCameras(failedReads))
-        {
-            failedReadAllSensors.insert(failedReadAllSensors.end(), failedReads.begin(), failedReads.end());
-        }
-
-        if (!readAllFrameGrabberCameras(failedReads))
-        {
-            failedReadAllSensors.insert(failedReadAllSensors.end(), failedReads.begin(), failedReads.end());
-        }
+        img.second = yarp::os::Time::now();
         return true;
     }
     
@@ -537,14 +461,6 @@ bool YarpCameraBridge::initialize(std::weak_ptr<IParametersHandler> handler)
     if (ptr == nullptr)
     {
         std::cerr << logPrefix << "The handler is not pointing to an already initialized memory."
-                  << std ::endl;
-        return false;
-    }
-
-
-    if(!ptr->getParameter("check_for_nan", m_pimpl->checkForNAN))
-    {
-        std::cerr << logPrefix << "Unable to get check_for_nan."
                   << std ::endl;
         return false;
     }
@@ -590,21 +506,6 @@ bool YarpCameraBridge::setDriversList(const yarp::dev::PolyDriverList& deviceDri
     return true;
 }
 
-bool YarpCameraBridge::advance()
-{
-    constexpr std::string_view logPrefix = "[YarpCameraBridge::advance] ";
-    if (!m_pimpl->checkValid("[YarpCameraBridge::advance]"))
-    {
-        std::cerr << logPrefix << "Please initialize and set drivers list before running advance()."
-                  << std ::endl;
-        return false;
-    }
-
-    m_pimpl->readAllSensors(m_pimpl->failedSensorReads);
-
-    return true;
-}
-
 bool YarpCameraBridge::isValid() const
 {
     return m_pimpl->checkValid("[YarpCameraBridge::isValid]");
@@ -638,43 +539,83 @@ bool YarpCameraBridge::getColorImage(const std::string& camName,
                                      cv::Mat& colorImg,
                                      double* receiveTimeInSeconds)
 {
-    if (!m_pimpl->checkValidSensorMeasure("YarpCameraBridge::getColorImage ",
-                                           m_pimpl->wholeBodyCameraRGBImages, camName))
+    if (!m_pimpl->checkValid("YarpCameraBridge::getColorImage "))
     {
         return false;
     }
-
-    auto iter = m_pimpl->wholeBodyCameraRGBImages.find(camName);
-    colorImg = yarp::cv::toCvMat(iter->second.first);
+    
+    m_pimpl->rgbImage.first.zero();
+    if (m_pimpl->resizeImageBuffer(camName, m_pimpl->metaData.bridgeOptions.rgbImgDimensions, m_pimpl->rgbImage))
+    {
+        if (!m_pimpl->readCameraImage(camName, m_pimpl->wholeBodyFrameGrabberInterface, m_pimpl->rgbImage))
+        {
+            std::cerr << "YarpCameraBridge::getColorImage " << camName << " could not read image." << std::endl;
+            return false;
+        }
+        
+        colorImg = yarp::cv::toCvMat(m_pimpl->rgbImage.first);
+        receiveTimeInSeconds = &m_pimpl->rgbImage.second;
+    }
+    else 
+    {
+        m_pimpl->flexImage.first.zero();
+        if (!m_pimpl->resizeImageBuffer(camName, m_pimpl->metaData.bridgeOptions.rgbdImgDimensions, m_pimpl->flexImage))
+        {
+            std::cerr << "YarpCameraBridge::getColorImage " << camName << " could not resize image buffers." << std::endl;
+            return false;
+        }
+        
+        if (!m_pimpl->readCameraImage(camName, m_pimpl->wholeBodyRGBDInterface, m_pimpl->flexImage))
+        {
+            std::cerr << "YarpCameraBridge::getColorImage " << camName << " could not read image." << std::endl;
+            return false;
+        }
+        
+        auto& yarpImage = m_pimpl->flexImage.first;
+        colorImg = cv::Mat(yarpImage.height(), yarpImage.width(), yarp::cv::type_code<yarp::sig::PixelRgb>::value,
+                           yarpImage.getRawImage(), yarpImage.getRowSize());
+        receiveTimeInSeconds = &m_pimpl->flexImage.second;
+    }
+    
     if (colorImg.rows <= 0 || colorImg.cols <= 0)
     {
-        std::cerr << "YarpCameraBridge::getColorImage " << camName << " image with invalid size." << std::endl;
+        std::cerr << "YarpCameraBridge::getDepthImage " << camName << " image with invalid size." << std::endl;
         return false;
     }
-    receiveTimeInSeconds = &iter->second.second;
-
+    
     return true;
 }
 
 bool YarpCameraBridge::getDepthImage(const std::string& camName,
                                      cv::Mat& depthImg,
                                      double* receiveTimeInSeconds)
-{
-    if (!m_pimpl->checkValidSensorMeasure("YarpCameraBridge::getDepthImage ",
-                                           m_pimpl->wholeBodyCameraDepthImages, camName))
+{   
+    if (!m_pimpl->checkValid("YarpCameraBridge::getDepthImage "))
     {
         return false;
     }
-
-    auto iter = m_pimpl->wholeBodyCameraDepthImages.find(camName);
-    depthImg = yarp::cv::toCvMat(iter->second.first);
+    
+    m_pimpl->depthImage.first.zero();
+    if (!m_pimpl->resizeImageBuffer(camName, m_pimpl->metaData.bridgeOptions.rgbdImgDimensions, m_pimpl->depthImage))
+    {
+        std::cerr << "YarpCameraBridge::getDepthImage " << camName << " could not resize image buffers." << std::endl;
+        return false;
+    }
+    
+    if (!m_pimpl->readCameraImage(camName, m_pimpl->wholeBodyRGBDInterface, m_pimpl->depthImage))
+    {
+        std::cerr << "YarpCameraBridge::getDepthImage " << camName << " could not read image." << std::endl;
+        return false;
+    }
+          
+    depthImg = yarp::cv::toCvMat(m_pimpl->depthImage.first);
+    receiveTimeInSeconds = &m_pimpl->depthImage.second;
     
     if (depthImg.rows <= 0 || depthImg.cols <= 0)
     {
         std::cerr << "YarpCameraBridge::getDepthImage " << camName << " image with invalid size." << std::endl;
         return false;
     }
-    
-    receiveTimeInSeconds = &iter->second.second;
+        
     return true;
 }

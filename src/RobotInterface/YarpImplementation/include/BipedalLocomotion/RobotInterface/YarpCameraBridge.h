@@ -41,7 +41,6 @@ namespace RobotInterface
  * The parameters for writing the configuration file for this class is given as,
  * |     Group                  |         Parameter               | Type              |                   Description                   |
  * |:--------------------------:|:-------------------------------:|:-----------------:|:---------------------------------------------- :|
- * |                            |check_for_nan                    | boolean           |flag to activate checking for NANs in the incoming measurement buffers, not applicable for images|
  * |Cameras                     |                                 |                   |Expects cameras to be opened either as remote frame grabber ("RemoteFrameGrabber") with IFrameGrabber interface or rgbd sensor ("RGBDSensorClient") with IRGBDSensor interface|
  * |                            |rgbd_cameras_list                        | vector of strings |list containing the devices opened as RGBDSensorClients containing the IRGBD sensor interface      |
  * |                            |rgbd_image_width                 | vector of strings |list containing the image width dimensions of RGBD cameras. Required parameter if cameras are enabled. The list must be the same size and order as rgbd_list |
@@ -51,8 +50,7 @@ namespace RobotInterface
  * |                            |rgb_image_height                 | vector of strings |list containing the image height dimensions of RGB cameras. Required parameter if cameras are enabled. The list must be the same size and order as rgb_list |
  *
  */
-class YarpCameraBridge : public ICameraBridge,
-                         public BipedalLocomotion::System::Advanceable<CameraBridgeMetaData>
+class YarpCameraBridge : public ICameraBridge
 {
 public:
     /**
@@ -79,30 +77,17 @@ public:
     bool setDriversList(const yarp::dev::PolyDriverList& deviceDriversList);
 
     /**
-     * @brief Advance the internal state. This may change the value retrievable from get().
-     * @return True if the advance is successful.
-     */
-    bool advance() final;
-
-    /**
      * @brief Determines the validity of the object retrieved with get()
      * @return True if the object is valid, false otherwise.
      */
-    bool isValid() const final;
-
-    /**
-     * @brief list of sensors that was failed to be read in the current advance() step
-     * @return list of sensors as a vector of strings
-     */
-    std::vector<std::string> getFailedSensorReads();
+    bool isValid() const;
 
     /**
      * @brief Get the object.
      * @return a const reference of the requested object.
      */
-    const CameraBridgeMetaData& get() const final;
+    const CameraBridgeMetaData& get() const;
 
- 
     /**
      * Get rgb cameras
      * @param[out] rgbCamerasList list of rgb cameras attached to the bridge
