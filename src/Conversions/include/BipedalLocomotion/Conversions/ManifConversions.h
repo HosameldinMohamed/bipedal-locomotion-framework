@@ -59,6 +59,41 @@ namespace Conversions
         return toManifPose(iDynTree::toEigen(H.getRotation()),
                            iDynTree::toEigen(H.getPosition()));;
     }
+    
+    /**
+     * @brief Convert rotation matrix, translation vector and linear velocity to manif SE_2_3 object
+     *
+     * @param rotation reference to 3x3 Eigen matrix
+     * @param translation reference of 3x1 Eigen matrix
+     * @param velocity reference of 3x1 Eigen matrix
+     * @return extended pose as manif SE_2_3 object
+     */
+    template <class Scalar>
+    manif::SE_2_3<Scalar> toManifExtendedPose(const Eigen::Matrix<Scalar, 3, 3>& rotation,
+                                              const Eigen::Matrix<Scalar, 3, 1>& translation,
+                                              const Eigen::Matrix<Scalar, 3, 1>& velocity)
+    {
+        Eigen::Quaternion<Scalar> quat = Eigen::Quaternion<Scalar>(rotation);
+        quat.normalize(); // SO3 constructor expects normalized quaternion
+        return manif::SE_2_3<Scalar>(translation, quat, velocity);
+    }
+    
+    /**
+     * @brief Convert rotation matrix, translation vector and linear velocity to manif SE_2_3 object
+     *
+     * @param rotation Eigen ref of 3x3 rotation matrix
+     * @param translation Eigen ref of 3x1 translation vector
+     * @param velocity Eigen ref of 3x1 translation vector
+     * @return extended pose as manif SE_2_3 object
+     */
+    inline manif::SE_2_3d toManifExtendedPose(Eigen::Ref<const Eigen::Matrix3d> rotation,
+                                              Eigen::Ref<const Eigen::Vector3d> translation,
+                                              Eigen::Ref<const Eigen::Vector3d> velocity)
+    {
+        Eigen::Quaterniond quat = Eigen::Quaterniond(rotation);
+        quat.normalize(); // SO3 constructor expects normalized quaternion
+        return manif::SE_2_3d(translation, quat, velocity);
+    }
 
 } // namespace Conversions
 } // namespace BipedalLocomotion
