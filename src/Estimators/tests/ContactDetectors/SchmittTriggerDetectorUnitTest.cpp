@@ -49,6 +49,7 @@ TEST_CASE("Schmitt Trigger Detector")
     // contact state should turn true
     auto rightContact = detector.get("right");
     REQUIRE(rightContact.isActive);
+    REQUIRE(rightContact.switchTime == 0.3);
 
     // fall signal
     detector.setTimedContactIntensity("right", 0.4, 7);
@@ -61,6 +62,7 @@ TEST_CASE("Schmitt Trigger Detector")
     // contact state should turn false
     rightContact = detector.get("right");
     REQUIRE(!rightContact.isActive);
+    REQUIRE(rightContact.switchTime == 0.6);
 
     // add a new contact
     EstimatedContact newContact;
@@ -70,7 +72,7 @@ TEST_CASE("Schmitt Trigger Detector")
     params.switchOffAfter = 0.2;
     params.switchOnAfter = 0.2;
 
-    detector.addContact("left", false, params);
+    detector.addContact("left", false, params, 0.6);
     auto contacts = detector.get();
     REQUIRE(contacts.size() == 2);
 
@@ -94,6 +96,7 @@ TEST_CASE("Schmitt Trigger Detector")
     contacts = detector.get();
     REQUIRE(contacts["right"].isActive);
     REQUIRE(contacts["left"].isActive);
+    REQUIRE(contacts["right"].switchTime == 0.9);
 
     // Test removing contact
     REQUIRE(detector.removeContact("left"));
@@ -105,4 +108,3 @@ TEST_CASE("Schmitt Trigger Detector")
     rightContact = detector.get("right");
     REQUIRE(!rightContact.isActive);
 }
-
