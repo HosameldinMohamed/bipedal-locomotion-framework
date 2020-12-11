@@ -41,7 +41,7 @@ bool ContactDetector::initialize(std::weak_ptr<IParametersHandler> handler)
         "Contact detector initialization is successful."
         << std::endl;
 
-    m_detectorState = State::NotInitialized;
+    m_detectorState = State::Initialized;
     return true;
 }
 
@@ -51,7 +51,19 @@ bool ContactDetector::customInitialization(std::weak_ptr<IParametersHandler> han
 }
 
 bool ContactDetector::advance()
-{
+{    
+    std::string_view printPrefix = "[ContactDetector::advance] ";
+    if (m_detectorState == State::NotInitialized)
+    {
+        std::cerr << printPrefix << "Please initialize the contact detector before running advance."
+        << std::endl;
+        return false;        
+    }    
+    else 
+    {
+        m_detectorState = State::Running;        
+    }
+    
     if (!updateContactStates())
     {
         return false;
@@ -75,19 +87,21 @@ bool ContactDetector::resetContacts()
 }
 
 
-const ContactStates& ContactDetector::get() const
+const EstimatedContactList& ContactDetector::get() const
 {
     return m_contactStates;
 }
 
-EstimatedContact ContactDetector::get(const std::string& contactName)
+bool ContactDetector::get(const std::string& contactName, EstimatedContact& contact) const
 {
     if ( m_contactStates.find(contactName) == m_contactStates.end() )
     {
-        return EstimatedContact();
+        std::cerr << "[ContactDetector::get] Contact not found.";
+        return false;
     }
 
-    return m_contactStates.at(contactName);
+    contact = m_contactStates.at(contactName);
+    return true;
 }
 
 
