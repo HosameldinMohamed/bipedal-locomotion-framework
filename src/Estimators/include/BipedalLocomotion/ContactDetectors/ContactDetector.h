@@ -59,9 +59,16 @@ public:
      * Get state of specific contact
      * @param[in] contactName name of contact
      * @param[out] contact estimated contact
-     * @return contact state if contact exists, false otherwise
+     * @return true if contact exists, false otherwise
      */
     bool get(const std::string& contactName, BipedalLocomotion::Contacts::EstimatedContact& contact) const;
+    
+    /**
+     * Get state of specific contact
+     * @param[in] contactName name of contact
+     * @return contact state if contact exists, a dummy contact otherwise
+     */
+    BipedalLocomotion::Contacts::EstimatedContact get(const std::string& contactName) const;
 
     /**
     * Determines the validity of the object retrieved with get()

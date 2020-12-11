@@ -104,6 +104,16 @@ bool ContactDetector::get(const std::string& contactName, EstimatedContact& cont
     return true;
 }
 
+EstimatedContact ContactDetector::get(const std::string& contactName) const 
+{
+    if ( m_contactStates.find(contactName) == m_contactStates.end() )
+    {
+        std::cerr << "[ContactDetector::get] Contact not found.";
+        return EstimatedContact();
+    }
+
+    return m_contactStates.at(contactName);
+}
 
 bool ContactDetector::isValid() const
 {
