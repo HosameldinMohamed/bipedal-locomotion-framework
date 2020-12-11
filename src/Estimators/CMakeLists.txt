@@ -12,7 +12,7 @@ if(FRAMEWORK_COMPILE_Estimators)
     PUBLIC_LINK_LIBRARIES  BipedalLocomotion::ParametersHandler BipedalLocomotion::System Eigen3::Eigen)
 endif()
 
-if(FRAMEWORK_COMPILE_FloatingBaseEstimators AND FRAMEWORK_COMPILE_Contacts)
+if(FRAMEWORK_COMPILE_Contact)
   set(H_PREFIX include/BipedalLocomotion/ContactDetectors)
     add_bipedal_locomotion_library(
     NAME                   ContactDetectors
@@ -20,7 +20,9 @@ if(FRAMEWORK_COMPILE_FloatingBaseEstimators AND FRAMEWORK_COMPILE_Contacts)
     SOURCES                src/ContactDetector.cpp src/SchmittTriggerDetector.cpp
     PUBLIC_HEADERS         ${H_PREFIX}/ContactDetector.h ${H_PREFIX}/SchmittTriggerDetector.h
     PUBLIC_LINK_LIBRARIES  BipedalLocomotion::ParametersHandler BipedalLocomotion::System BipedalLocomotion::Contacts)
+endif()
 
+if(FRAMEWORK_COMPILE_FloatingBaseEstimators)
   set(H_PREFIX include/BipedalLocomotion/FloatingBaseEstimators)
   add_bipedal_locomotion_library(
     NAME                   FloatingBaseEstimators

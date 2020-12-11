@@ -3,7 +3,7 @@
 # GNU Lesser General Public License v2.1 or any later version.
 
 
-if (FRAMEWORK_COMPILE_Contacts)
+if (FRAMEWORK_COMPILE_Contact)
   set(H_PREFIX include/BipedalLocomotion/Contacts)
 
   add_bipedal_locomotion_library(
