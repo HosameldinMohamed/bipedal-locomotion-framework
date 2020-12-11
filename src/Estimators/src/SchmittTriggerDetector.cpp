@@ -16,7 +16,7 @@ class SchmittTriggerDetector::Impl
 public:
 
     std::unordered_map<std::string, std::pair<SchmittTriggerParams, SchmittTriggerUnit> > manager; /**< Container for Params-SchmittTrigger pairs of contacts */
-    std::unordered_map<std::string, std::pair<double, double> > forceMeasure; /**< Container for Timestamp-ForceMeasure pairs of contacts */
+    std::unordered_map<std::string, std::pair<double, double> > triggerInputMeasure; /**< Container for Timestamp-TriggerInputMeasure pairs of contacts */
 
     /**
      * Utility function to check if contact exists
@@ -49,7 +49,7 @@ SchmittTriggerDetector::SchmittTriggerDetector() : m_pimpl(std::make_unique<Impl
 {
     m_contactStates.clear();
     m_pimpl->manager.clear();
-    m_pimpl->forceMeasure.clear();
+    m_pimpl->triggerInputMeasure.clear();
 }
 
 SchmittTriggerDetector::~SchmittTriggerDetector() = default;
@@ -126,7 +126,7 @@ bool SchmittTriggerDetector::updateContactStates()
         auto& contact = m_contactStates.at(contactName);
         auto& detectorUnit =  m_pimpl->manager.at(contactName);
 
-        const auto& measure = m_pimpl->forceMeasure.at(contactName);
+        const auto& measure = m_pimpl->triggerInputMeasure.at(contactName);
         detectorUnit.second.update(measure.first, measure.second);
 
         contact.isActive = detectorUnit.second.getState(contact.switchTime);
@@ -134,9 +134,9 @@ bool SchmittTriggerDetector::updateContactStates()
     return true;
 }
 
-bool SchmittTriggerDetector::setTimedContactIntensity(const std::string& contactName,
-                                                      const double& time,
-                                                      const double& force)
+bool SchmittTriggerDetector::setTimedTriggerInput(const std::string& contactName,
+                                                  const double& time,
+                                                  const double& triggerInput)
 {
     std::string_view printPrefix = "[SchmittTriggerDetector::setTimedContactIntensity] ";
     if (!m_pimpl->contactExists(contactName))
@@ -145,17 +145,17 @@ bool SchmittTriggerDetector::setTimedContactIntensity(const std::string& contact
         return false;
     }
 
-    m_pimpl->forceMeasure.at(contactName).first = time;
-    m_pimpl->forceMeasure.at(contactName).second = force;
+    m_pimpl->triggerInputMeasure.at(contactName).first = time;
+    m_pimpl->triggerInputMeasure.at(contactName).second = triggerInput;
 
     return true;
 }
 
-bool SchmittTriggerDetector::setTimedContactIntensities(const std::unordered_map<std::string, std::pair<double, double> >& timedForces)
+bool SchmittTriggerDetector::setTimedTriggerInputs(const std::unordered_map<std::string, std::pair<double, double>>& timedInputs)
 {
     std::string_view printPrefix = "[SchmittTriggerDetector::setTimedContactIntensities] ";
     std::vector<std::string> skippedUpdates;
-    for (auto& [contactName, measure] : timedForces)
+    for (auto& [contactName, measure] : timedInputs)
     {
         if (!m_pimpl->contactExists(contactName))
         {
@@ -163,7 +163,7 @@ bool SchmittTriggerDetector::setTimedContactIntensities(const std::unordered_map
             continue;
         }
 
-        m_pimpl->forceMeasure.at(contactName) = measure;
+        m_pimpl->triggerInputMeasure.at(contactName) = measure;
     }
 
     if (skippedUpdates.size() > 0)
@@ -208,7 +208,7 @@ bool SchmittTriggerDetector::addContact(const std::string& contactName,
     schmittTrigger.setState(initialState, time_now);
 
     m_pimpl->manager[contactName] = std::make_pair(params, schmittTrigger);
-    m_pimpl->forceMeasure[contactName] = std::make_pair(0.0, 0.0);
+    m_pimpl->triggerInputMeasure[contactName] = std::make_pair(0.0, 0.0);
     m_contactStates[contactName] = newContact;
     return true;
 }
@@ -223,7 +223,7 @@ bool SchmittTriggerDetector::removeContact(const std::string& contactName)
     }
 
     m_pimpl->manager.erase(contactName);
-    m_pimpl->forceMeasure.erase(contactName);
+    m_pimpl->triggerInputMeasure.erase(contactName);
     m_contactStates.erase(contactName);
     return true;
 }
@@ -240,7 +240,7 @@ bool SchmittTriggerDetector::resetContact(const std::string& contactName,
     }
 
     m_pimpl->manager.at(contactName).first = params;
-    m_pimpl->forceMeasure.at(contactName) = std::make_pair(0.0, 0.);
+    m_pimpl->triggerInputMeasure.at(contactName) = std::make_pair(0.0, 0.);
     m_contactStates.at(contactName).isActive = state;
     m_contactStates.at(contactName).switchTime = 0.0;
 

@@ -39,28 +39,29 @@ TEST_CASE("Schmitt Trigger Detector")
     detector.resetContacts();
 
     // rise signal
-    detector.setTimedContactIntensity("right", 0.1, 120);
+    detector.setTimedTriggerInput("right", 0.1, 120);
     detector.advance();
-    detector.setTimedContactIntensity("right", 0.2, 120);
+    detector.setTimedTriggerInput("right", 0.2, 120);
     detector.advance();
-    detector.setTimedContactIntensity("right", 0.3, 120);
+    detector.setTimedTriggerInput("right", 0.3, 120);
     detector.advance();
 
     // contact state should turn true
-    auto rightContact = detector.get("right");
+    EstimatedContact rightContact;
+    REQUIRE(detector.get("right", rightContact));
     REQUIRE(rightContact.isActive);
     REQUIRE(rightContact.switchTime == 0.3);
 
     // fall signal
-    detector.setTimedContactIntensity("right", 0.4, 7);
+    detector.setTimedTriggerInput("right", 0.4, 7);
     detector.advance();
-    detector.setTimedContactIntensity("right", 0.5, 7);
+    detector.setTimedTriggerInput("right", 0.5, 7);
     detector.advance();
-    detector.setTimedContactIntensity("right", 0.6, 7);
+    detector.setTimedTriggerInput("right", 0.6, 7);
     detector.advance();
 
     // contact state should turn false
-    rightContact = detector.get("right");
+    REQUIRE(detector.get("right", rightContact));
     REQUIRE(!rightContact.isActive);
     REQUIRE(rightContact.switchTime == 0.6);
 
@@ -80,17 +81,17 @@ TEST_CASE("Schmitt Trigger Detector")
     std::unordered_map<std::string, std::pair<double, double> > timedForces;
     timedForces["right"] = std::make_pair(0.7, 120);
     timedForces["left"] = std::make_pair(0.7, 120);
-    detector.setTimedContactIntensities(timedForces);
+    detector.setTimedTriggerInputs(timedForces);
     detector.advance();
 
     timedForces["right"] = std::make_pair(0.8, 120);
     timedForces["left"] = std::make_pair(0.8, 120);
-    detector.setTimedContactIntensities(timedForces);
+    detector.setTimedTriggerInputs(timedForces);
     detector.advance();
 
     timedForces["right"] = std::make_pair(0.9, 120);
     timedForces["left"] = std::make_pair(0.9, 120);
-    detector.setTimedContactIntensities(timedForces);
+    detector.setTimedTriggerInputs(timedForces);
     detector.advance();
 
     contacts = detector.get();
@@ -105,6 +106,6 @@ TEST_CASE("Schmitt Trigger Detector")
 
     // Test resetting contact
     detector.resetContact("right", false, params);
-    rightContact = detector.get("right");
+    REQUIRE(detector.get("right", rightContact));
     REQUIRE(!rightContact.isActive);
 }

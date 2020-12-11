@@ -32,23 +32,23 @@ public:
     ~SchmittTriggerDetector();
 
     /**
-     * Set contact force intensity and time stamp for an existing contact
-     * @param[in] contactName Internal state of the estimator
+     * Set trigger input and time stamp for an existing SchmittTrigger unit
+     * @param[in] contactName name of the contact
      * @param[in] time time of measurement
      * @param[in] force contact force intensity (typically contact normal force)
      * @return True in case of success, false otherwise.
      */
-    bool setTimedContactIntensity(const std::string& contactName,
-                                  const double& time,
-                                  const double& force);
+    bool setTimedTriggerInput(const std::string& contactName,
+                              const double& time,
+                              const double& triggerInput);
 
     /**
-     * Set contact force intensity and time stamp for existing contacts
-     * @param[in] timedForces container of timed force intesities, pair(first, second): (time, force)
-     * @note any contacts in the input container that does not already exist will be ignored
+     * Set trigger input and time stamp for existing units
+     * @param[in] timedInputs container of timed trigger inputs, pair(first, second): (time, force)
+     * @note any unit names in the input container that does not already exist will be ignored
      * @return True in case of success, false otherwise.
      */
-    bool setTimedContactIntensities(const std::unordered_map<std::string, std::pair<double, double>>& timedForces);
+    bool setTimedTriggerInputs(const std::unordered_map<std::string, std::pair<double, double>>& timedInputs);
 
     /**
      * Add a contact whose contact state need to be tracked
