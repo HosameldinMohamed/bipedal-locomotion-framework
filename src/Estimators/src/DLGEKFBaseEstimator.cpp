@@ -845,4 +845,9 @@ Pose DLGEKFBaseEstimator::Impl::iDynPose2manifPose(const iDynTree::Transform& Hd
     return Pose(p, q);
 }
 
-
+bool DLGEKFBaseEstimator::setGlobalPose(iDynTree::FrameIndex idx, iDynTree::Transform H)
+{
+    // @Prash you can change the function as you like, I just put it here as a place holder
+    bool ok=true;
+    return ok;
+}

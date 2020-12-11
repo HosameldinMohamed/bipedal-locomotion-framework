@@ -74,6 +74,15 @@ public:
      */
     void toggleEKFUpdate(const bool& flag) { m_options.ekfUpdateEnabled = flag; };
 
+    /**
+     * Obtains the global pose of the root-link given the global pose of any other frame
+     * on the robot
+     * @param[in] idx the given frame Frame index
+     * @param[in] H the Transformation matrix represents the global pose of the given frame
+     * @return true in case of success, false otherwise
+     */
+    bool setGlobalPose(iDynTree::FrameIndex idx, iDynTree::Transform H);
+
 protected:
     /**
     * These custom parameter specifications should be specified by the derived class.
