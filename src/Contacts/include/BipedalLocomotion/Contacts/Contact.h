@@ -98,12 +98,12 @@ struct EstimatedContact : ContactBase
      */
     double lastUpdateTime{0.0};
 
-    std::pair<bool, double> getTimedContact()
+    std::pair<bool, double> getContactDetails()
     {
         return std::make_pair(isActive, switchTime);
     }
 
-    void setTimedContact(const std::pair<bool, double>& pair)
+    void setContactStateStamped(const std::pair<bool, double>& pair)
     {
         isActive = pair.first;
         switchTime = pair.second;
