@@ -183,6 +183,12 @@ struct Options
     *
     */
     Eigen::Vector3d accelerationDueToGravity{0, 0, -9.80665};
+    
+    /**
+     * @brief Enable the use of global measurements to update state estimates
+     */
+    bool globalPoseMeasurementsEnabled{false};
+        
 };
 
 } //namespace FloatingBaseEstimators

@@ -8,10 +8,12 @@
 #include <BipedalLocomotion/FloatingBaseEstimators/DLGEKFBaseEstimator.h>
 #include <BipedalLocomotion/FloatingBaseEstimators/IMUBipedMatrixLieGroup.h>
 #include <iDynTree/Core/EigenHelpers.h>
+#include <BipedalLocomotion/Conversions/ManifConversions.h>
 
 #include <manif/manif.h>
 
 using namespace BipedalLocomotion::Estimators;
+using namespace BipedalLocomotion::Conversions;
 
 class DLGEKFBaseEstimator::Impl
 {
@@ -501,6 +503,108 @@ bool DLGEKFBaseEstimator::updateKinematics(const FloatingBaseEstimators::Measure
     return true;
 }
 
+bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measurements& meas,
+                                               const double& dt)
+{
+    // For each frame, the measurement model is as follows
+    //
+    // h(X) = [A_R_B  p]
+    //        [       1]    
+    //
+    // h(X) \in SE(3)
+    // hinv = h^{-1}(x) \in SE(3)
+    //
+    // The innovation term in the Lie algebra of the SE(3) becomes,
+    // deltaY = logvee_SE3(hinv, y)
+    //
+    // The measurement model Jacobian for the double support, if biases are included,
+    // H = [  I | 0_3 |  0_3 | 0_3 | 0_3 | 0_3 | 0_3 | 0_3 | 0_3 ]
+    //     [0_3 |   I |  0_3 | 0_3 | 0_3 | 0_3 | 0_3 | 0_3 | 0_3 ]
+    // I is the 3d identity matrix
+    // If biases are enabled, the last 6 columns are not considered
+    //
+    // The measurement noise covariance,
+    // Rc = blkdiag(F_J_{IMU,F} Renc F_J_{IMU,F}.T)
+    // Rk = Rc/dt is the discretized measurement noise covariance matrix
+    // The measurement noise is left-trivialized forward kinematic velocity noise which is computed
+    // using the manipulator Jacobian of the foot with respect to the IMU
+        
+    const std::string_view printPrefix = "[DLGEKFBaseEstimator::updateWithGlobalPose] ";
+    if ( (meas.encoders.size() != m_modelComp.nrJoints()) ||
+         (meas.encodersSpeed.size() != m_modelComp.nrJoints()))
+    {
+        std::cerr << printPrefix << "Kinematic measurements size mismatch. Please call setKinematics() before calling advance()."
+        << std::endl;
+        return false;
+    }
+
+    if (!m_modelComp.kinDyn().setJointPos(iDynTree::make_span(meas.encoders.data(), meas.encoders.size())))
+    {
+        std::cerr << printPrefix << "Unable to set joint positions."
+        << std::endl;
+        return false;
+    }
+    
+    if (meas.globalPoses.size() <= 0)
+    {
+        return false;
+    }
+    
+    Eigen::VectorXd deltaY;
+    Eigen::MatrixXd H, N;
+    const int measurementSpaceDims{6};
+                
+    manif::SE3d hOfX = manif::SE3d(m_state.imuPosition, m_state.imuOrientation);
+    Eigen::MatrixXd F_J_IMUF(6, m_modelComp.kinDyn().getNrOfDegreesOfFreedom());
+    Eigen::VectorXd encodersVar = m_sensorsDev.encodersNoise.array().square();
+    Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(encodersVar.asDiagonal());
+    
+    deltaY.resize(measurementSpaceDims);
+    std::vector<int> frames;
+    for (auto& [idx, pose] : meas.globalPoses)
+    {
+        manif::SE3d frame_H_imu  = toManifPose(m_modelComp.kinDyn().getRelativeTransform(idx, 
+                                                                                         m_modelComp.baseIMUIdx()));
+        auto y_WHIMU = pose*frame_H_imu;
+                
+        // prepare measurement model Jacobian H
+        if (m_options.imuBiasEstimationEnabled)
+        {
+            H.resize(measurementSpaceDims, m_pimpl->m_vecSizeWBias);
+        }
+        else
+        {
+            H.resize(measurementSpaceDims, m_pimpl->m_vecSizeWOBias);
+        }
+        
+        H.setZero();
+        H.topLeftCorner<3, 3>().setIdentity();
+        H.block<3, 3>(3, 3).setIdentity();
+        
+        auto poseError = y_WHIMU - hOfX; // this performs logvee_SE3(inv(hLF), yLF)
+        deltaY << poseError.coeffs();
+        
+        
+        m_modelComp.kinDyn().getRelativeJacobianExplicit(m_modelComp.baseIMUIdx(), idx, idx, idx, F_J_IMUF);
+        N.resize(measurementSpaceDims, measurementSpaceDims);
+        N = F_J_IMUF*Renc*(F_J_IMUF.transpose());
+        N /= dt;
+        
+        if (!m_pimpl->updateStates(deltaY, H, N, m_state, m_pimpl->m_P))
+        {
+            return false;
+        }
+        m_pimpl->extractStateVar(m_pimpl->m_P, m_options.imuBiasEstimationEnabled, m_stateStdDev); // unwrap state covariance matrix diagonal
+    }
+    
+    for (auto& frame : frames)
+    {
+        // erase used measurements
+        meas.globalPoses.erase(frame);        
+    }
+    
+    return true;
+}
 
 bool DLGEKFBaseEstimator::Impl::propagateStates(const Eigen::VectorXd& Omegak,
                                                 const bool& estimateBias,
@@ -843,11 +947,4 @@ Pose DLGEKFBaseEstimator::Impl::iDynPose2manifPose(const iDynTree::Transform& Hd
     Eigen::Quaterniond q = Eigen::Quaterniond(iDynTree::toEigen(Hdyn.getRotation()));
     q.normalize();
     return Pose(p, q);
-}
-
-bool DLGEKFBaseEstimator::setGlobalPose(iDynTree::FrameIndex idx, iDynTree::Transform H)
-{
-    // @Prash you can change the function as you like, I just put it here as a place holder
-    bool ok=true;
-    return ok;
 }

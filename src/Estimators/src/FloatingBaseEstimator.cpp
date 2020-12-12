@@ -115,6 +115,10 @@ bool FloatingBaseEstimator::advance()
     if (m_options.ekfUpdateEnabled)
     {
         ok = ok && updateKinematics(m_meas, m_dt);
+        if (m_options.globalPoseMeasurementsEnabled)
+        {
+            ok = ok && updateWithGlobalPose(m_meas, m_dt);
+        }
     }
 
     ok = ok && updateBaseStateFromIMUState(m_state, m_measPrev,
@@ -333,6 +337,38 @@ bool FloatingBaseEstimator::setContacts(const bool& lfInContact,
     return true;
 }
 
+bool FloatingBaseEstimator::setGlobalPose(const std::string& frameName, 
+                                          const Eigen::Quaterniond& q,
+                                          Eigen::Ref<const Eigen::Vector3d> p)
+{
+    auto idx = m_modelComp.kinDyn().model().getFrameIndex(frameName);
+    if (!m_modelComp.kinDyn().model().isValidFrameIndex(idx))
+    {
+        std::cerr << "[FloatingBaseEstimator::setGlobalPose] Contact frame index: " << idx
+        << " not found in loaded model, skipping measurement." << std::endl;
+        return false;
+    }
+    
+    auto& poses = m_meas.globalPoses;
+    if (poses.find(idx) != poses.end())
+    {
+        poses.at(idx).quat(q);
+        poses.at(idx).translation(p);
+    }
+    else
+    {
+        poses[idx] = manif::SE3d(p, q);
+    }
+    return true;
+}
+
+bool FloatingBaseEstimator::setGlobalPosition(const std::string& frameName,
+                                              Eigen::Ref<const Eigen::Vector3d> p)
+{    
+    Eigen::Quaterniond q = Eigen::Quaterniond::Identity();
+    return setGlobalPose(frameName, q, p);
+}
+
 FloatingBaseEstimator::ModelComputations& FloatingBaseEstimator::modelComputations()
 {
     return m_modelComp;
@@ -458,6 +494,11 @@ bool FloatingBaseEstimator::setupOptions(std::weak_ptr<BipedalLocomotion::Parame
 
     std::cout << "[FloatingBaseEstimator::setupOptions] Setting value for acceleration due to gravity: "
     << m_options.accelerationDueToGravity.transpose() << std::endl;
+    
+    if (!handle->getParameter("use_global_pose_measure", m_options.globalPoseMeasurementsEnabled))
+    {
+        m_options.globalPoseMeasurementsEnabled = false;
+    }
 
     return true;
 }

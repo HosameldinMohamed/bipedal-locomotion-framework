@@ -127,11 +127,14 @@ public:
          */
         const int& nrJoints() const { return m_nrJoints; }
         const std::string& baseLink() const { return m_baseLink; }
+        const iDynTree::FrameIndex& baseLinkIdx() const { return m_baseLinkIdx; }        
         const std::string& baseLinkIMU() const { return m_baseImuFrame; }
+        const iDynTree::FrameIndex& baseIMUIdx() const { return m_baseImuIdx; }
         const std::string& leftFootContactFrame() const { return m_lFootContactFrame; }
         const std::string& rightFootContactFrame() const { return m_rFootContactFrame; }
         const iDynTree::Transform& base_H_IMU() const { return m_base_H_imu; }
         const bool& isModelSet() const { return m_modelSet; }
+        iDynTree::KinDynComputations& kinDyn() { return m_kindyn; }
 
     private:
         std::string m_baseLink{""}; /**< name of the floating base link*/
@@ -192,6 +195,32 @@ public:
     */
     bool setKinematics(const Eigen::VectorXd& encoders,
                        const Eigen::VectorXd& encoderSpeeds);
+    
+    /**
+     * Set the global pose of a frame relative to the base link
+     * the frame is assumed to be available on the robot and 
+     * the relative transform between the frame and base link
+     * can be obtained using kinematic measurements
+     * @param[in] frameName the given frame name
+     * @param[in] H global pose of the given frame
+     * @return true in case of success, false otherwise
+     */
+    bool setGlobalPose(const std::string& frameName, 
+                       const Eigen::Quaterniond& q,
+                       Eigen::Ref<const Eigen::Vector3d> p);
+    
+    /**
+     * Set the global position of a frame relative to the base link
+     * the frame is assumed to be available on the robot and 
+     * the relative transform between the frame and base link
+     * can be obtained using kinematic measurements
+     * 
+     * @param[in] frameName the given frame name
+     * @param[in] p global position of the given frame
+     * @return true in case of success, false otherwise
+     */
+    bool setGlobalPosition(const std::string& frameName,
+                           Eigen::Ref<const Eigen::Vector3d> p);
 
     /**
     * Compute one step of the estimator
@@ -281,6 +310,15 @@ protected:
     virtual bool updateKinematics(const FloatingBaseEstimators::Measurements& meas,
                                   const double& dt) { return true; };
 
+    /**
+    * Update the predicted state estimates using global pose measurements
+    * @param[in] meas measurements to update the predicted states
+    * @param[in] dt sampling period in seconds
+    * @return True in case of success, false otherwise.
+    */
+    virtual bool updateWithGlobalPose(FloatingBaseEstimators::Measurements& meas,
+                                      const double& dt) {return true; };                                  
+                                  
     /**
     * Setup estimator options. The parameters in the Options group are,
     * - enable_imu_bias_estimation [PARAMETER|-|Enable/disable IMU bias estimation]
@@ -418,6 +456,7 @@ private:
                                      iDynTree::Twist& baseTwist);
 
     bool staticInitializeIMUBias();
+    
 };
 
 

@@ -73,16 +73,7 @@ public:
      * @param[in] flag flag for ekf update
      */
     void toggleEKFUpdate(const bool& flag) { m_options.ekfUpdateEnabled = flag; };
-
-    /**
-     * Obtains the global pose of the root-link given the global pose of any other frame
-     * on the robot
-     * @param[in] idx the given frame Frame index
-     * @param[in] H the Transformation matrix represents the global pose of the given frame
-     * @return true in case of success, false otherwise
-     */
-    bool setGlobalPose(iDynTree::FrameIndex idx, iDynTree::Transform H);
-
+    
 protected:
     /**
     * These custom parameter specifications should be specified by the derived class.
@@ -110,6 +101,15 @@ protected:
     */
     virtual bool updateKinematics(const FloatingBaseEstimators::Measurements& meas,
                                   const double& dt) override;
+                                  
+    /**
+    * Update the predicted state estimates using global pose measurements
+    * @param[in] meas measurements to update the predicted states
+    * @param[in] dt sampling period in seconds
+    * @return True in case of success, false otherwise.
+    */
+    virtual bool updateWithGlobalPose(FloatingBaseEstimators::Measurements& meas,
+                                      const double& dt) override;
 
 private:
     /**

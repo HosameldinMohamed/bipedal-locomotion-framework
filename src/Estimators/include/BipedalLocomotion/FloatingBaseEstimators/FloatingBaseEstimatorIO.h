@@ -12,6 +12,9 @@
 #include <iDynTree/Core/Transform.h>
 #include <iDynTree/Core/Twist.h>
 
+#include <manif/manif.h>
+#include <unordered_map>
+
 namespace BipedalLocomotion
 {
 namespace Estimators
@@ -77,6 +80,13 @@ struct Measurements
     Eigen::VectorXd encoders, encodersSpeed; /**< Joint position and joint velocity measurements */
     bool lfInContact{false}; /**< left foot contact state */
     bool rfInContact{false}; /**< right foot contact state */
+    
+    /** stamped global poses, 
+     * the usage of this map must be in a way 
+     * that every time an element is used, 
+     * it must be erased from the map 
+     */
+    std::unordered_map<int, manif::SE3d > globalPoses; 
 };
 
 } // namespace FloatingBaseEstimators
