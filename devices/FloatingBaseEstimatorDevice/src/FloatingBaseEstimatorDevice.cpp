@@ -80,7 +80,13 @@ bool FloatingBaseEstimatorDevice::open(yarp::os::Searchable& config)
              return false;
          }
      }
-
+     
+     if (m_robot == iRonCubMK1)
+     {
+         YarpUtilities::getElementFromSearchable(config, "ironcub_aruco_port", m_iRonCubMKArucoPortName);   
+         YarpUtilities::getElementFromSearchable(config, "ironcub_aruco_origin_frame", m_iRonCubArucoOriginFrame);          
+     }
+          
     return true;
 }
 
@@ -247,6 +253,25 @@ bool FloatingBaseEstimatorDevice::openCommunications()
 
     openBufferedSigPort(m_comms.internalStateAndStdDevPort, m_portPrefix, "/internal_state/stateAndStdDev:o");
     openBufferedSigPort(m_comms.contactStatePort, m_portPrefix, "/contacts/stateAndNormalForce:o");
+    
+    if (m_robot == iRonCubMK1)
+    {
+        bool ok = openBufferedSigPort(m_comms.ironCubMKArucoPort, m_portPrefix, "/aruco_board/state:i");
+        
+        if (!ok)
+        {
+            yError() << "[FloatingBaseEstimatorDevice][openCommunications] Could not connect to port ";
+            return false;
+        }
+        
+        if(!yarp::os::Network::connect(m_iRonCubMKArucoPortName,  m_portPrefix + "/aruco_board/state:i"))
+        {
+            yError() << "Unable to make a port connection between " << 
+            m_iRonCubMKArucoPortName << " and " << m_portPrefix + "/aruco_board/state:i";
+            return false;
+        }
+    }
+    
     return true;
 }
 
@@ -370,6 +395,34 @@ bool FloatingBaseEstimatorDevice::updateKinematics()
     if (!m_estimator->setKinematics(encoders, encoderSpeeds))
     {
         return false;
+    }
+    return true;
+}
+
+bool FloatingBaseEstimatorDevice::updateiRonCubArucoBoardPose()
+{
+    if (m_robot == iRonCubMK1)
+    {
+        yarp::sig::Vector* arucoBoardPose{nullptr};
+        yarp::sig::Vector poseVec;
+        arucoBoardPose = m_comms.ironCubMKArucoPort.read(false);
+        if(arucoBoardPose != nullptr)
+        {   
+            poseVec = *arucoBoardPose;
+            Eigen::Vector3d pos;
+            pos << poseVec(0),
+                   poseVec(1),
+                   poseVec(2);
+            Eigen::Quaterniond quat = Eigen::Quaterniond(poseVec(3),
+                                                      poseVec(4),
+                                                      poseVec(5),
+                                                      poseVec(6));
+            
+            if (!m_estimator->setGlobalPose(m_iRonCubArucoOriginFrame, quat, pos))
+            {
+                return false;
+            }                             
+        }
     }
     return true;
 }

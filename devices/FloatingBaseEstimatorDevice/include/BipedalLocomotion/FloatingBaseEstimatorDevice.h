@@ -55,6 +55,7 @@ private:
     bool updateInertialBuffers();
     bool updateContactStates();
     bool updateKinematics();
+    bool updateiRonCubArucoBoardPose();
 
     void publish();
     void publishBaseLinkState(const BipedalLocomotion::Estimators::FloatingBaseEstimators::Output& out);
@@ -67,12 +68,15 @@ private:
                              const std::string& address);
     void closeBufferedSigPort(yarp::os::BufferedPort<yarp::sig::Vector>& port);
 
-    struct
+    struct Comms
     {
         yarp::os::BufferedPort<yarp::sig::Vector> floatingBaseStatePort;
         yarp::os::BufferedPort<yarp::sig::Vector> internalStateAndStdDevPort;
         yarp::os::BufferedPort<yarp::sig::Vector> contactStatePort;
-    } m_comms;
+        yarp::os::BufferedPort<yarp::sig::Vector> ironCubMKArucoPort;
+    };
+    
+    Comms m_comms;
 
     iDynTree::Model m_model;
     std::unique_ptr<BipedalLocomotion::RobotInterface::YarpSensorBridge> m_robotSensorBridge;
@@ -93,6 +97,13 @@ private:
     yarp::dev::PolyDriver  m_transformBroadcaster;
     yarp::dev::IFrameTransform *m_transformInterface{nullptr};
     bool m_publishROSTF{true};
+    
+    // robot names
+    const std::string iRonCubMK1{"iRonCub-MK-1"};
+    
+    // iRonCub specific parameters
+    std::string m_iRonCubMKArucoPortName{"/aruco_position"};
+    std::string m_iRonCubArucoOriginFrame{"chest_aruco_origin"};
 };
 
 
