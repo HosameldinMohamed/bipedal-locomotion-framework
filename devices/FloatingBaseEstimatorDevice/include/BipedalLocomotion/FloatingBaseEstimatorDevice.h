@@ -99,7 +99,7 @@ private:
     bool m_publishROSTF{true};
     
     // robot names
-    const std::string iRonCubMK1{"iRonCub-MK-1"};
+    const std::string iRonCubMK1{"iRonCub-Mk1"};
     
     // iRonCub specific parameters
     std::string m_iRonCubMKArucoPortName{"/aruco_position"};
