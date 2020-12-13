@@ -556,10 +556,11 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
                 
     manif::SE3d hOfX = manif::SE3d(m_state.imuPosition, m_state.imuOrientation);
 //     Eigen::MatrixXd F_J_IMUF(6, m_modelComp.kinDyn().getNrOfDegreesOfFreedom());
-    Eigen::VectorXd Rarc = m_sensorsDev.arucoNoise.array().square()*(1/dt);
+    Eigen::VectorXd arucoVar = m_sensorsDev.arucoNoise.array().square();
 //     Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(encodersNoise.asDiagonal());
 
-    Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(Rarc.asDiagonal())*(1/dt);
+    std::cout << "[Debuggin] arucoVar= " << arucoVar.transpose() << std::endl;
+    Eigen::MatrixXd Rarc = static_cast<Eigen::MatrixXd>(arucoVar.asDiagonal());
     
     deltaY.resize(measurementSpaceDims);
     std::vector<int> frames;

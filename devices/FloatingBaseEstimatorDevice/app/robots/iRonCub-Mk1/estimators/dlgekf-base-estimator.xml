@@ -79,15 +79,15 @@ GNU Lesser General Public License v2.1 or any later version. -->
         <param name="swing_foot_linear_velocity_noise_std_dev">(0.05, 0.05, 0.05)</param>
         <param name="swing_foot_angular_velocity_noise_std_dev">(0.015, 0.015, 0.015)</param>
         <param name="forward_kinematic_measurement_noise_std_dev">(1e-3, 1e-3, 1e-3, 1e-6, 1e-6, 1e-6)</param>
-        <param name="aruco_noise_std_dev">(1e-3, 1e-3, 1e-3, 1e-6, 1e-6, 1e-6)</param>
+        <param name="aruco_noise_std_dev">(1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1)</param>
         <param name="encoders_measurement_noise_std_dev">(2e-3, 2e-3, 2e-3,
-                                                          2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5,
-                                                          2e-5, 2e-5, 2e-5)</param>
+                                                          2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3,
+                                                          2e-3, 2e-3, 2e-3)</param>
         <param name="accelerometer_measurement_bias_noise_std_dev">(1e-4, 1e-4, 1e-4)</param>
         <param name="gyroscope_measurement_bias_noise_std_dev">(1e-4, 1e-4, 1e-4)</param>
     </group>
