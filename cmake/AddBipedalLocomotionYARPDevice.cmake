@@ -37,19 +37,19 @@ function(add_bipedal_yarp_device)
                               TYPE ${type}
                               INCLUDE ${public_headers})
 
-  yarp_add_plugin(${name} ${sources} ${public_headers})
+  yarp_add_plugin(${ini_package} ${sources} ${public_headers})
 
-  target_link_libraries(${name} PUBLIC ${public_link_libraries})
-  target_compile_features(${name} PUBLIC cxx_std_17)
+  target_link_libraries(${ini_package} PUBLIC ${public_link_libraries})
+  target_compile_features(${ini_package} PUBLIC cxx_std_17)
 
   # Specify include directories for both compilation and installation process.
   # The $<INSTALL_PREFIX> generator expression is useful to ensure to create
   # relocatable configuration files, see https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#creating-relocatable-packages
-  target_include_directories(${name} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  target_include_directories(${ini_package} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "<INSTALLINTERFACE:<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
 
   # Specify installation targets, typology and destination folders.
-  yarp_install(TARGETS ${name}
+  yarp_install(TARGETS ${ini_package}
                COMPONENT runtime
                LIBRARY DESTINATION ${YARP_DYNAMIC_PLUGINS_INSTALL_DIR}
                ARCHIVE DESTINATION ${YARP_STATIC_PLUGINS_INSTALL_DIR}

@@ -6,10 +6,10 @@ if(FRAMEWORK_COMPILE_YarpImplementation AND FRAMEWORK_COMPILE_FloatingBaseEstima
 
 # Warning: the CONFIGURE_PACKAGE_NAME option should be different from the plugin NAME
 add_bipedal_yarp_device(
-  NAME FloatingBaseEstimatorDevice
+  NAME floatingbaseestimatordevice
   TYPE BipedalLocomotion::FloatingBaseEstimatorDevice
   SOURCES src/FloatingBaseEstimatorDevice.cpp
   PUBLIC_HEADERS include/BipedalLocomotion/FloatingBaseEstimatorDevice.h
   PUBLIC_LINK_LIBRARIES ${YARP_LIBRARIES} ${iDynTree_LIBRARIES} BipedalLocomotion::YarpUtilities BipedalLocomotion::RobotInterfaceYarpImplementation BipedalLocomotion::ParametersHandlerYarpImplementation BipedalLocomotion::FloatingBaseEstimators
-  CONFIGURE_PACKAGE_NAME floating_base_estimator_device)
+  CONFIGURE_PACKAGE_NAME yarp_floatingbaseestimatordevice)
 endif()
