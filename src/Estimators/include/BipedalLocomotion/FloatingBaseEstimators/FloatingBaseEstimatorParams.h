@@ -80,6 +80,11 @@ struct SensorsStdDev
     * @brief White Gaussian noise deviation for encoder measurements in continuous time
     */
     Eigen::VectorXd encodersNoise;
+    
+    /**
+    * @brief White Gaussian noise deviation aruco marker detection
+    */
+    Eigen::Matrix<double, 6, 1> arucoNoise;
 };
 
 /**

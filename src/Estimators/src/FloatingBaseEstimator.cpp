@@ -558,6 +558,9 @@ bool FloatingBaseEstimator::setupSensorDevs(std::weak_ptr<BipedalLocomotion::Par
         m_sensorsDev.accelerometerBiasNoise << accBiasNoise[0], accBiasNoise[1], accBiasNoise[2];
         m_sensorsDev.gyroscopeBiasNoise << gyroBiasNoise[0], gyroBiasNoise[1], gyroBiasNoise[2];
     }
+    
+    std::vector<double> arucoNoise(6);
+    if (!setupFixedVectorParamPrivate("aruco_noise_std_dev", printPrefix, handler, arucoNoise))
 
     m_sensorsDev.accelerometerNoise << accNoise[0], accNoise[1], accNoise[2];
     m_sensorsDev.gyroscopeNoise << gyroNoise[0], gyroNoise[1], gyroNoise[2];
@@ -573,6 +576,9 @@ bool FloatingBaseEstimator::setupSensorDevs(std::weak_ptr<BipedalLocomotion::Par
 
     m_sensorsDev.encodersNoise.resize(encodersNoise.size());
     m_sensorsDev.encodersNoise = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(encodersNoise.data(), encodersNoise.size());
+    
+    m_sensorsDev.arucoNoise << arucoNoise[0], arucoNoise[1], arucoNoise[2], 
+                               arucoNoise[3], arucoNoise[4], arucoNoise[5];
     return true;
 }
 

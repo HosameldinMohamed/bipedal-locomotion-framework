@@ -555,9 +555,11 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
     const int measurementSpaceDims{6};
                 
     manif::SE3d hOfX = manif::SE3d(m_state.imuPosition, m_state.imuOrientation);
-    Eigen::MatrixXd F_J_IMUF(6, m_modelComp.kinDyn().getNrOfDegreesOfFreedom());
-    Eigen::VectorXd encodersVar = m_sensorsDev.encodersNoise.array().square();
-    Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(encodersVar.asDiagonal());
+//     Eigen::MatrixXd F_J_IMUF(6, m_modelComp.kinDyn().getNrOfDegreesOfFreedom());
+    Eigen::VectorXd Rarc = m_sensorsDev.arucoNoise.array().square()*(1/dt);
+//     Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(encodersNoise.asDiagonal());
+
+    Eigen::MatrixXd Renc = static_cast<Eigen::MatrixXd>(Rarc.asDiagonal())*(1/dt);
     
     deltaY.resize(measurementSpaceDims);
     std::vector<int> frames;
@@ -592,12 +594,13 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
         std::cout << "[Debuggin] transform base link to IMU link= " << m_modelComp.kinDyn().getRelativeTransform(m_modelComp.baseLinkIdx(),m_modelComp.baseIMUIdx()).toString() << std::endl;
         std::cout << "[Debuggin] same transform= " << m_modelComp.base_H_IMU().toString() << std::endl;
         
-        m_modelComp.kinDyn().getRelativeJacobianExplicit(m_modelComp.baseIMUIdx(), idx, idx, idx, F_J_IMUF);
+//         m_modelComp.kinDyn().getRelativeJacobianExplicit(m_modelComp.baseIMUIdx(), idx, idx, idx, F_J_IMUF);
         N.resize(measurementSpaceDims, measurementSpaceDims);
-        N = F_J_IMUF*Renc*(F_J_IMUF.transpose());
-        N /= dt;
+// //         N = F_J_IMUF*Renc*(F_J_IMUF.transpose());
+//         N = Renc;
+//         N /= dt;
         
-        if (!m_pimpl->updateStates(deltaY, H, N, m_state, m_pimpl->m_P))
+        if (!m_pimpl->updateStates(deltaY, H, Rarc, m_state, m_pimpl->m_P))
         {
             return false;
         }
