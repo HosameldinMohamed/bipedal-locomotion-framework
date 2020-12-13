@@ -322,6 +322,7 @@ bool FloatingBaseEstimatorDevice::updateMeasurements()
     ok = ok && updateContactStates();
     ok = ok && updateInertialBuffers();
     ok = ok && updateKinematics();
+    ok = ok && updateiRonCubArucoBoardPose();
 
     return ok;
 }
@@ -401,8 +402,10 @@ bool FloatingBaseEstimatorDevice::updateKinematics()
 
 bool FloatingBaseEstimatorDevice::updateiRonCubArucoBoardPose()
 {
+    std::cout << "Check if iRonCubMK1" << std::endl;
     if (m_robot == iRonCubMK1)
     {
+        std::cout << "We are in iRonCubMK1" << std::endl;
         yarp::sig::Vector* arucoBoardPose{nullptr};
         yarp::sig::Vector poseVec;
         arucoBoardPose = m_comms.ironCubMKArucoPort.read(false);
@@ -434,6 +437,7 @@ void FloatingBaseEstimatorDevice::publish()
         auto estimatorOut = m_estimator->get();
         publishBaseLinkState(estimatorOut);
         publishInternalStateAndStdDev(estimatorOut);
+        std::cout << "[Debuggin] estimator out state= " << estimatorOut.state.imuPosition.transpose() << " ,  estimatorOut state quaternion " << estimatorOut.state.imuOrientation.coeffs().transpose() << std::endl;
     }
     publishFootContactStatesAndNormalForces();
 }
@@ -463,9 +467,19 @@ void FloatingBaseEstimatorDevice::publishBaseLinkState(const FloatingBaseEstimat
     iDynTree::toYarp(estimatorOut.basePose, basePoseYARP);
     if (m_publishROSTF && m_transformInterface != nullptr)
     {
-        if (!m_transformInterface->setTransform("/world", "/base_link", basePoseYARP))
+        if (!m_transformInterface->setTransform("/base_link", "/world", basePoseYARP))
         {
             yError() << "[FloatingBaseEstimatorDevice] Could not publish measured base pose transform from  primary IMU";
+        }
+    }
+
+    yarp::sig::Matrix arucoYARP;
+    iDynTree::toYarp(estimatorOut.arucoPose, arucoYARP);
+    if (m_publishROSTF && m_transformInterface != nullptr)
+    {
+        if (!m_transformInterface->setTransform("/aruco_est", "/world", arucoYARP))
+        {
+            yError() << "[FloatingBaseEstimatorDevice] Could not publish measured aruco transform from  the base pose";
         }
     }
 
@@ -560,7 +574,7 @@ bool FloatingBaseEstimatorDevice::close()
 bool FloatingBaseEstimatorDevice::loadTransformBroadcaster()
 {
     yarp::os::Property tfBroadcasterSettings{{"device", yarp::os::Value("transformClient")},
-                                             {"remote", yarp::os::Value("/transformServer")},
+                                             {"remote", yarp::os::Value("/tfServer")},
                                              {"local", yarp::os::Value(m_portPrefix + "/transformClient")}};
 
     if (!m_transformBroadcaster.open(tfBroadcasterSettings))

@@ -561,11 +561,11 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
     
     deltaY.resize(measurementSpaceDims);
     std::vector<int> frames;
-    for (auto& [idx, pose] : meas.globalPoses)
+    for (auto& [idx, W_H_frame] : meas.globalPoses)
     {
         manif::SE3d frame_H_imu  = toManifPose(m_modelComp.kinDyn().getRelativeTransform(idx, 
                                                                                          m_modelComp.baseIMUIdx()));
-        auto y_WHIMU = pose*frame_H_imu;
+        auto y_WHIMU = W_H_frame*frame_H_imu;
                 
         // prepare measurement model Jacobian H
         if (m_options.imuBiasEstimationEnabled)
@@ -584,6 +584,13 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
         auto poseError = y_WHIMU - hOfX; // this performs logvee_SE3(inv(hLF), yLF)
         deltaY << poseError.coeffs();
         
+        std::cout << "[Debuggin] the W_H_frame quat= " << W_H_frame.quat().coeffs().transpose() << std::endl;
+        std::cout << "[Debuggin] aruco index= " << m_modelComp.kinDyn().model().getFrameName(idx) << std::endl;
+        std::cout << "[Debuggin] y_WHIMU= " << y_WHIMU.translation().transpose() << " , quaternion " << y_WHIMU.quat().coeffs().transpose() << std::endl;
+        std::cout << "[Debuggin] hOfX= " << hOfX.translation().transpose() << " , quaternion " << hOfX.quat().coeffs().transpose() << std::endl;
+        
+        std::cout << "[Debuggin] transform base link to IMU link= " << m_modelComp.kinDyn().getRelativeTransform(m_modelComp.baseLinkIdx(),m_modelComp.baseIMUIdx()).toString() << std::endl;
+        std::cout << "[Debuggin] same transform= " << m_modelComp.base_H_IMU().toString() << std::endl;
         
         m_modelComp.kinDyn().getRelativeJacobianExplicit(m_modelComp.baseIMUIdx(), idx, idx, idx, F_J_IMUF);
         N.resize(measurementSpaceDims, measurementSpaceDims);
@@ -594,6 +601,8 @@ bool DLGEKFBaseEstimator::updateWithGlobalPose(FloatingBaseEstimators::Measureme
         {
             return false;
         }
+        std::cout << "[Debuggin] m_state= " << m_state.imuPosition.transpose() << " , m_state quaternion " << m_state.imuOrientation.coeffs().transpose() << std::endl;
+        
         m_pimpl->extractStateVar(m_pimpl->m_P, m_options.imuBiasEstimationEnabled, m_stateStdDev); // unwrap state covariance matrix diagonal
     }
     

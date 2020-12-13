@@ -68,6 +68,7 @@ struct Output
 
     iDynTree::Transform basePose; /**< Estimated base link pose */
     iDynTree::Twist baseTwist; /**< Estimate base link velocity in mixed-velocity representation */
+    iDynTree::Transform arucoPose; /**< Estimated aruco pose */
 };
 
 /**

@@ -35,6 +35,7 @@
 #include <cmath>
 #include <set>
 #include <algorithm>
+#include <iostream>
 
 namespace BipedalLocomotion
 {
@@ -433,6 +434,7 @@ struct YarpSensorBridge::Impl
 
                 if (nrChannels != nrChannelsInSensor)
                 {
+                    std::cout << "nrChannels= " << nrChannels << " ,nrChannelsInSensor= " << nrChannelsInSensor << std::endl;
                     std::cerr << logPrefix << sensorName << " Mismatch in the expected number of channels in the sensor stream." << std::endl;
                     return false;
                 }

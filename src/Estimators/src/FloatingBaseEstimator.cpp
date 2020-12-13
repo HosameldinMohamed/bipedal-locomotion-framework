@@ -112,19 +112,26 @@ bool FloatingBaseEstimator::advance()
 
 
     ok = ok && predictState(m_measPrev, m_dt);
+    std::cout << "[Debugging] ok after predictState?. " << ok << std::endl;
     if (m_options.ekfUpdateEnabled)
     {
         ok = ok && updateKinematics(m_meas, m_dt);
+        std::cout << "[Debugging] ok after updateKinematics?. " << ok << std::endl;
         if (m_options.globalPoseMeasurementsEnabled)
         {
             ok = ok && updateWithGlobalPose(m_meas, m_dt);
         }
     }
+    std::cout << "[Debugging] ok after  updateWithGlobalPose?. " << ok << std::endl;
 
     ok = ok && updateBaseStateFromIMUState(m_state, m_measPrev,
                                            m_estimatorOut.basePose, m_estimatorOut.baseTwist);
+    std::cout << "[Debugging] ok after updateBaseStateFromIMUState?. " << ok << std::endl;
     m_statePrev = m_state;
     m_measPrev = m_meas;
+
+    iDynTree::Transform base_H_aruco = m_modelComp.kinDyn().getRelativeTransform(m_modelComp.baseLinkIdx(),m_modelComp.kinDyn().model().getFrameIndex("chest_aruco_origin"));
+    m_estimatorOut.arucoPose = m_estimatorOut.basePose*base_H_aruco;
 
     m_estimatorOut.state = m_state;
     m_estimatorOut.stateStdDev = m_stateStdDev;
@@ -232,6 +239,7 @@ bool FloatingBaseEstimator::ModelComputations::getBaseStateFromIMUState(const iD
     }
 
     A_H_B = A_H_IMU*(m_base_H_imu.inverse());
+
 
     // transform velocity (mixed-representation)
     auto A_o_BIMU = A_H_B.getRotation().changeCoordFrameOf(m_base_H_imu.getPosition());

@@ -13,7 +13,7 @@ GNU Lesser General Public License v2.1 or any later version. -->
     <param name="left_foot_wrench">left_foot_cartesian_wrench</param>
     <param name="right_foot_wrench">right_foot_cartesian_wrench</param>
     <param name="estimator_type">DLGEKF</param>
-    <param name="publish_rostf">false</param>
+    <param name="publish_rostf">true</param>
     <param name="ironcub_aruco_port">/aruco_position</param>
     <param name="ironcub_aruco_origin_frame">chest_aruco_origin</param>
 
@@ -72,7 +72,7 @@ GNU Lesser General Public License v2.1 or any later version. -->
     <group name="SensorsStdDev">
          <!--<param name="accelerometer_measurement_noise_std_dev">(0.0382, 0.01548, 0.0042)</param>
         <param name="gyroscope_measurement_noise_std_dev">(0.0111, 0.0024, 0.0043)</param>-->
-        <param name="accelerometer_measurement_noise_std_dev">(0.4, 0.4, 0.4)</param>
+        <param name="accelerometer_measurement_noise_std_dev">(4.0, 4.0, 4.0)</param>
         <param name="gyroscope_measurement_noise_std_dev">(0.01, 0.01, 0.01)</param>
         <param name="contact_foot_linear_velocity_noise_std_dev">(9e-4, 9e-4, 9e-4)</param>
         <param name="contact_foot_angular_velocity_noise_std_dev">(4e-5, 4e-5, 4e-5)</param>
@@ -80,20 +80,20 @@ GNU Lesser General Public License v2.1 or any later version. -->
         <param name="swing_foot_angular_velocity_noise_std_dev">(0.015, 0.015, 0.015)</param>
         <param name="forward_kinematic_measurement_noise_std_dev">(1e-3, 1e-3, 1e-3, 1e-6, 1e-6, 1e-6)</param>
         <param name="encoders_measurement_noise_std_dev">(2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3,
-                                                          2e-3, 2e-3, 2e-3)</param>
+                                                          2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5,
+                                                          2e-5, 2e-5, 2e-5)</param>
         <param name="accelerometer_measurement_bias_noise_std_dev">(1e-4, 1e-4, 1e-4)</param>
         <param name="gyroscope_measurement_bias_noise_std_dev">(1e-4, 1e-4, 1e-4)</param>
     </group>
 
     <group name="InitialStates">
-        <param name="imu_orientation_quaternion_wxyz">(0.3218, -0.6304, -0.6292, 0.3212)</param>
-        <param name="imu_position_xyz">(0.0296,-0.1439, 0.4915)</param>
+        <param name="imu_orientation_quaternion_wxyz">(0.232928, -0.0741153, 0.964542, 0.0995476)</param>
+        <param name="imu_position_xyz">(-0.0571663, 0.56415, 1.5655)</param>
         <param name="imu_linear_velocity_xyz">(0.0, 0.0, 0.0)</param>
         <param name="l_contact_frame_orientation_quaternion_wxyz">(1.0000, -0.0059, -0.0001, -0.0015)</param>
         <param name="l_contact_frame_position_xyz">(0.0791, -0.0817, 0.0109)</param>
